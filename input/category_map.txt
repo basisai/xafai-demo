@@ -1,0 +1,71 @@
+{
+    "Workclass": [
+        "Workclass=?",
+        "Workclass=Federal-gov",
+        "Workclass=Local-gov",
+        "Workclass=Never-worked",
+        "Workclass=Private",
+        "Workclass=Self-emp-inc",
+        "Workclass=Self-emp-not-inc",
+        "Workclass=State-gov",
+        "Workclass=Without-pay"
+    ],
+    "Education": [
+        "Education=Associates",
+        "Education=Bachelors",
+        "Education=Doctorate",
+        "Education=Dropout",
+        "Education=High School grad",
+        "Education=Masters",
+        "Education=Prof-School"
+    ],
+    "Marital Status": [
+        "Marital Status=Married",
+        "Marital Status=Never-Married",
+        "Marital Status=Separated",
+        "Marital Status=Widowed"
+    ],
+    "Occupation": [
+        "Occupation=?",
+        "Occupation=Admin",
+        "Occupation=Blue-Collar",
+        "Occupation=Military",
+        "Occupation=Other",
+        "Occupation=Professional",
+        "Occupation=Sales",
+        "Occupation=Service",
+        "Occupation=White-Collar"
+    ],
+    "Relationship": [
+        "Relationship=Husband",
+        "Relationship=Not-in-family",
+        "Relationship=Other-relative",
+        "Relationship=Own-child",
+        "Relationship=Unmarried",
+        "Relationship=Wife"
+    ],
+    "Race": [
+        "Race=Amer-Indian-Eskimo",
+        "Race=Asian-Pac-Islander",
+        "Race=Black",
+        "Race=Other",
+        "Race=White"
+    ],
+    "Sex": [
+        "Sex=Female",
+        "Sex=Male"
+    ],
+    "Country": [
+        "Country=?",
+        "Country=British-Commonwealth",
+        "Country=China",
+        "Country=Euro_1",
+        "Country=Euro_2",
+        "Country=Latin-America",
+        "Country=Other",
+        "Country=SE-Asia",
+        "Country=South-America",
+        "Country=United-States",
+        "Country=Yugoslavia"
+    ]
+}

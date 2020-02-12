@@ -1,0 +1,318 @@
+"""
+Script containing commonly used functions.
+"""
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from aif360.datasets import BinaryLabelDataset
+from aif360.metrics.classification_metric import ClassificationMetric
+from pdpbox import pdp, info_plots
+
+plt.style.use('seaborn-darkgrid')
+
+
+def pdp_plot(model,
+             dataset,
+             model_features,
+             feature,
+             feature_name,
+             num_grid_points=10,
+             xticklabels=None,
+             plot_lines=False,
+             frac_to_plot=1,
+             plot_pts_dist=False,
+             x_quantile=False,
+             show_percentile=False):
+    """Wrapper for pdp.pdp_plot. Uses pdp.pdp_isolate."""
+    pdp_iso = pdp.pdp_isolate(
+        model=model,
+        dataset=dataset,
+        model_features=model_features,
+        feature=feature,
+        num_grid_points=num_grid_points,
+    )
+    
+    fig, axes = pdp.pdp_plot(
+        pdp_iso,
+        feature_name,
+        plot_lines=plot_lines,
+        frac_to_plot=frac_to_plot,
+        plot_pts_dist=plot_pts_dist,
+        x_quantile=x_quantile,
+        show_percentile=show_percentile,
+    )
+    
+    if xticklabels is not None:
+        if plot_lines:
+            _ = axes["pdp_ax"]["_count_ax"].set_xticklabels(xticklabels)
+        else:
+            _ = axes["pdp_ax"].set_xticklabels(xticklabels)
+    return fig
+
+
+def actual_plot(model,
+                X,
+                feature,
+                feature_name,
+                num_grid_points=10,
+                xticklabels=None,
+                show_percentile=False):
+    """Wrapper for info_plots.actual_plot."""
+    fig, axes, summary_df = info_plots.actual_plot(
+        model=model,
+        X=X,
+        feature=feature,
+        feature_name=feature_name,
+        num_grid_points=num_grid_points,
+        show_percentile=show_percentile,
+        predict_kwds={},
+    )
+    
+    if xticklabels is not None:
+        _ = axes["bar_ax"].set_xticklabels(xticklabels)
+    return fig, summary_df
+
+
+def target_plot(df,
+                feature,
+                feature_name,
+                target,
+                num_grid_points=10,
+                xticklabels=None,
+                show_percentile=False):
+    """Wrapper for info_plots.target_plot."""
+    fig, axes, summary_df = info_plots.target_plot(
+        df=df,
+        feature=feature,
+        feature_name=feature_name,
+        target=target,
+        num_grid_points=num_grid_points,
+        show_percentile=show_percentile,
+    )
+    
+    if xticklabels is not None:
+        _ = axes["bar_ax"].set_xticklabels(xticklabels)
+    return fig, summary_df
+
+
+def pdp_interact_plot(model,
+                      dataset,
+                      model_features,
+                      feature1,
+                      feature2,
+                      plot_type="grid",
+                      x_quantile=True,
+                      plot_pdp=False):
+    """Wrapper for pdp.pdp_interact_plot. Uses pdp.pdp_interact."""
+    pdp_interact_out = pdp.pdp_interact(
+        model=model,
+        dataset=dataset,
+        model_features=model_features,
+        features=[feature1, feature2],
+    )
+    
+    fig, axes = pdp.pdp_interact_plot(
+        pdp_interact_out=pdp_interact_out,
+        feature_names=[feature1, feature2],
+        plot_type=plot_type,
+        x_quantile=x_quantile,
+        plot_pdp=plot_pdp,
+    )
+    return fig
+
+
+def get_fairness(grdtruth,
+                 predicted,
+                 privileged_groups=None,
+                 unprivileged_groups=None):
+    """Fairness wrapper function."""
+    clf_metric = ClassificationMetric(grdtruth, predicted, unprivileged_groups, privileged_groups)
+    
+    fig_confmats = plot_confusion_matrix_by_group(clf_metric)
+    
+    fig_perfs, axs = plt.subplots(4, 4, figsize=(16, 16))
+    for i, metric_name in enumerate([
+            'TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC',
+            'selection_rate', 'precision', 'recall', 'sensitivity',
+            'specificity', 'power', 'error_rate']):
+        plot_performance_by_group(clf_metric, metric_name, ax=axs[i // 4][i % 4])
+    
+    metrics, metrics_others = compute_fairness_metrics(clf_metric)
+    return metrics, metrics_others, fig_confmats, fig_perfs
+
+
+def prepare_dataset(features,
+                    labels,
+                    scores=None,
+                    protected_columns=None,
+                    privileged_groups=None,
+                    unprivileged_groups=None, 
+                    favorable_label=None,
+                    unfavorable_label=None):
+    """Prepare dataset for computing fairness metrics."""
+    df = features.copy()
+    df['outcome'] = labels
+    
+    if scores is not None:
+        scores_names = 'scores'
+        df[scores_names] = scores
+    else:
+        scores_names = []
+
+    return BinaryLabelDataset(
+        df=df,
+        label_names=['outcome'],
+        scores_names=scores_names,
+        protected_attribute_names=protected_columns,
+        favorable_label=favorable_label,
+        unfavorable_label=unfavorable_label,
+        unprivileged_protected_attributes=unprivileged_groups,
+    )
+
+
+def compute_fairness_metrics(aif_metric, threshold=0.2):
+    """Compute and report fairness metrics."""
+    colnames = ["Metric name", "Definition", "Criterion", "Ratio", "Deviation"]
+    
+    # Primary metrics
+    fmetrics = []
+
+    # Statistical parity
+    disparate_impact = aif_metric.disparate_impact()
+    fmetrics.append(
+        ["Statistical parity", "equal FN/FP", "Independence",
+         disparate_impact, disparate_impact - 1])
+    
+    # Equal opportunity: equal FNR
+    fnr_ratio = aif_metric.false_negative_rate_ratio()
+    fmetrics.append(
+        ["Equal opportunity", "equal FNR", "Separation",
+         fnr_ratio, fnr_ratio - 1])
+    
+    # Predictive parity: equal PPV
+    unpriv = aif_metric.positive_predictive_value(False)
+    priv = aif_metric.positive_predictive_value(True)
+    ppv_ratio = unpriv / priv
+    fmetrics.append(
+        ["Predictive parity", "equal PPV", "Sufficiency",
+         ppv_ratio, ppv_ratio - 1])
+    
+    fmetrics = pd.DataFrame(fmetrics, columns=colnames)
+    fmetrics["Deviation<{:0f}%".format(threshold * 100)] = (np.abs(fmetrics["Deviation"]) < threshold)
+    
+    # Secondary metrics
+    fmetrics2 = []
+    
+    # Predictive equality: equal FPR
+    fpr_ratio = aif_metric.false_positive_rate_ratio()
+    fmetrics2.append(
+        ["Predictive equality", "equal FPR", "Separation",
+         fpr_ratio, fpr_ratio - 1])
+
+    # Equalized odds: equal TPR and equal FPR
+    unpriv = (aif_metric.true_positive_rate(False) + aif_metric.false_positive_rate(False)) / 2
+    priv = (aif_metric.true_positive_rate(True) + aif_metric.false_positive_rate(True)) / 2
+    avg_odds_ratio = unpriv / priv
+    fmetrics2.append(
+        ["Equalized odd", "equal TPR and equal FPR", "Separation",
+         avg_odds_ratio, avg_odds_ratio - 1])
+    
+    # Conditional use accuracy equality: equal PPV and equal NPV
+    unpriv = (aif_metric.positive_predictive_value(False) + aif_metric.negative_predictive_value(False)) / 2
+    priv = (aif_metric.positive_predictive_value(True) + aif_metric.negative_predictive_value(True)) / 2
+    acc_eq_ratio = unpriv / priv
+    fmetrics2.append(
+        ["Conditional use accuracy equality", "equal PPV and equal NPV", "Sufficiency",
+         acc_eq_ratio, acc_eq_ratio - 1])
+    
+    fmetrics2 = pd.DataFrame(fmetrics2, columns=colnames)
+    fmetrics2["Deviation<{:0f}%".format(threshold * 100)] = (np.abs(fmetrics2["Deviation"]) < threshold)
+
+#     indices_dict = OrderedDict(
+#         error_rate_difference=aif_metric.error_rate_difference(),
+#         error_rate_ratio=aif_metric.error_rate_ratio(),
+#         theil_index=aif_metric.theil_index(),
+#         between_group_theil_index=aif_metric.between_group_theil_index(),
+#         between_all_groups_theil_index=aif_metric.between_all_groups_theil_index(),
+#         coefficient_of_variation=aif_metric.coefficient_of_variation(),
+#         between_group_coefficient_of_variation=aif_metric.between_group_coefficient_of_variation(),
+#         between_all_groups_coefficient_of_variation=aif_metric.between_all_groups_coefficient_of_variation(),
+#         generalized_entropy_index=aif_metric.generalized_entropy_index(),
+#         between_group_generalized_entropy_index=aif_metric.between_group_generalized_entropy_index(),
+#         between_all_groups_generalized_entropy_index=aif_metric.between_all_groups_generalized_entropy_index()
+#     )
+#     indices = pd.DataFrame({'Metric name': list(indices_dict.keys()),
+#                             'Score': list(indices_dict.values())})
+    return fmetrics, fmetrics2
+
+
+def plot_confusion_matrix_by_group(aif_metric, figsize=(16, 4)):
+    """Plot confusion matrix by group."""
+    def _format_aif360_to_sklearn(aif360_mat):
+        return np.array([[aif360_mat['TN'], aif360_mat['FP']],
+                         [aif360_mat['FN'], aif360_mat['TP']]])
+
+    cmap = plt.get_cmap('Blues')
+    fig, axs = plt.subplots(1,3, figsize=figsize)
+
+    axs[0].set_title('all')
+    cm = _format_aif360_to_sklearn(aif_metric.binary_confusion_matrix(privileged=None))
+    sns.heatmap(cm, cmap=cmap, annot=True, fmt='g', ax=axs[0])
+    axs[0].set_xlabel('predicted values')
+    axs[0].set_ylabel('actual values')
+
+    axs[1].set_title('privileged')
+    cm = _format_aif360_to_sklearn(aif_metric.binary_confusion_matrix(privileged=True))
+    sns.heatmap(cm, cmap=cmap, annot=True, fmt='g', ax=axs[1])
+    axs[1].set_xlabel('predicted values')
+    axs[1].set_ylabel('actual values')
+
+    axs[2].set_title('unprivileged')
+    cm = _format_aif360_to_sklearn(aif_metric.binary_confusion_matrix(privileged=False))
+    sns.heatmap(cm, cmap=cmap, annot=True, fmt='g', ax=axs[2])
+    axs[2].set_xlabel('predicted values')
+    axs[2].set_ylabel('actual values')
+    return fig
+
+
+def plot_performance_by_group(aif_metric, metric_name, ax=None):
+    """Plot performance by group."""
+    def _add_annotations(ax):
+        for p in ax.patches:
+            ax.annotate(format(p.get_height(), '.3f'), 
+                        (p.get_x() + p.get_width() / 2., p.get_height()), 
+                        ha = 'center', va = 'center',
+                        xytext = (0, -10), textcoords = 'offset points')
+        
+    performance_metrics = ['TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC']
+    
+    func_dict = {
+        'selection_rate': lambda x: aif_metric.selection_rate(privileged=x),
+        'precision': lambda x: aif_metric.precision(privileged=x),
+        'recall': lambda x: aif_metric.recall(privileged=x),
+        'sensitivity': lambda x: aif_metric.sensitivity(privileged=x),
+        'specificity': lambda x: aif_metric.specificity(privileged=x),
+        'power': lambda x: aif_metric.power(privileged=x),
+        'error_rate': lambda x: aif_metric.error_rate(privileged=x),
+    }
+    
+    if metric_name in performance_metrics:
+        metric_func = lambda x: aif_metric.performance_measures(privileged=x)[metric_name]  
+    elif metric_name in func_dict.keys():
+        metric_func = func_dict[metric_name]
+    else:
+        raise NotImplementedError
+        return
+
+    df = pd.DataFrame()
+    df['Group'] = ['all', 'privileged', 'unprivileged'] 
+    df[metric_name] = [metric_func(group) for group in [None, True, False]]
+
+    if ax is None:
+        fig, ax = plt.subplots()
+    sns.barplot(x='Group',y=metric_name, data=df, ax=ax)
+    ax.set_title('{} by group'.format(metric_name))
+    ax.set_xlabel(None)
+    
+    _add_annotations(ax)
