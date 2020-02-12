@@ -199,7 +199,7 @@ def compute_fairness_metrics(aif_metric, threshold=0.2):
          ppv_ratio, ppv_ratio - 1])
     
     fmetrics = pd.DataFrame(fmetrics, columns=colnames)
-    fmetrics["Deviation<{:0f}%".format(threshold * 100)] = (np.abs(fmetrics["Deviation"]) < threshold)
+    fmetrics["Deviation<{:.0f}%".format(threshold * 100)] = (np.abs(fmetrics["Deviation"]) < threshold)
     
     # Secondary metrics
     fmetrics2 = []
@@ -227,23 +227,8 @@ def compute_fairness_metrics(aif_metric, threshold=0.2):
          acc_eq_ratio, acc_eq_ratio - 1])
     
     fmetrics2 = pd.DataFrame(fmetrics2, columns=colnames)
-    fmetrics2["Deviation<{:0f}%".format(threshold * 100)] = (np.abs(fmetrics2["Deviation"]) < threshold)
+    fmetrics2["Deviation<{:.0f}%".format(threshold * 100)] = (np.abs(fmetrics2["Deviation"]) < threshold)
 
-#     indices_dict = OrderedDict(
-#         error_rate_difference=aif_metric.error_rate_difference(),
-#         error_rate_ratio=aif_metric.error_rate_ratio(),
-#         theil_index=aif_metric.theil_index(),
-#         between_group_theil_index=aif_metric.between_group_theil_index(),
-#         between_all_groups_theil_index=aif_metric.between_all_groups_theil_index(),
-#         coefficient_of_variation=aif_metric.coefficient_of_variation(),
-#         between_group_coefficient_of_variation=aif_metric.between_group_coefficient_of_variation(),
-#         between_all_groups_coefficient_of_variation=aif_metric.between_all_groups_coefficient_of_variation(),
-#         generalized_entropy_index=aif_metric.generalized_entropy_index(),
-#         between_group_generalized_entropy_index=aif_metric.between_group_generalized_entropy_index(),
-#         between_all_groups_generalized_entropy_index=aif_metric.between_all_groups_generalized_entropy_index()
-#     )
-#     indices = pd.DataFrame({'Metric name': list(indices_dict.keys()),
-#                             'Score': list(indices_dict.values())})
     return fmetrics, fmetrics2
 
 
