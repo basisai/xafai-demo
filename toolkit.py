@@ -181,7 +181,7 @@ def compute_fairness_metrics(aif_metric, threshold=0.2):
     # Statistical parity
     disparate_impact = aif_metric.disparate_impact()
     fmetrics.append(
-        ["Statistical parity", "equal FN/FP", "Independence",
+        ["Statistical parity", "equal proportion of predicted positives", "Independence",
          disparate_impact, disparate_impact - 1])
     
     # Equal opportunity: equal FNR
