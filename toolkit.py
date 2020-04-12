@@ -122,26 +122,6 @@ def pdp_interact_plot(model,
     return fig
 
 
-def get_fairness(grdtruth,
-                 predicted,
-                 privileged_groups=None,
-                 unprivileged_groups=None):
-    """Fairness wrapper function."""
-    clf_metric = ClassificationMetric(grdtruth, predicted, unprivileged_groups, privileged_groups)
-    
-    fig_confmats = plot_confusion_matrix_by_group(clf_metric)
-    
-    fig_perfs, axs = plt.subplots(4, 4, figsize=(16, 16))
-    for i, metric_name in enumerate([
-            'TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC',
-            'selection_rate', 'precision', 'recall', 'sensitivity',
-            'specificity', 'power', 'error_rate']):
-        plot_performance_by_group(clf_metric, metric_name, ax=axs[i // 4][i % 4])
-    
-    metrics, metrics_others = compute_fairness_metrics(clf_metric)
-    return metrics, metrics_others, fig_confmats, fig_perfs
-
-
 def prepare_dataset(features,
                     labels,
                     scores=None,
@@ -169,6 +149,28 @@ def prepare_dataset(features,
         unfavorable_label=unfavorable_label,
         unprivileged_protected_attributes=unprivileged_groups,
     )
+
+
+def get_fairness(grdtruth,
+                 predicted,
+                 privileged_groups=None,
+                 unprivileged_groups=None,
+                 threshold=0.2):
+    """Fairness wrapper function."""
+    clf_metric = ClassificationMetric(grdtruth, predicted, unprivileged_groups, privileged_groups)
+    
+    fig_confmats = plot_confusion_matrix_by_group(clf_metric)
+    
+    fig_perfs, axs = plt.subplots(4, 4, figsize=(16, 16))
+    for i, metric_name in enumerate([
+            'TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC',
+            'selection_rate', 'precision', 'recall', 'sensitivity',
+            'specificity', 'power', 'error_rate']):
+        plot_performance_by_group(clf_metric, metric_name, ax=axs[i // 4][i % 4])
+    
+    print(f"Fairness is when deviation < {threshold}")
+    metrics, metrics_others = compute_fairness_metrics(clf_metric, threshold=threshold)
+    return metrics, metrics_others, fig_confmats, fig_perfs
 
 
 def compute_fairness_metrics(aif_metric, threshold=0.2):
@@ -199,7 +201,6 @@ def compute_fairness_metrics(aif_metric, threshold=0.2):
          ppv_ratio, ppv_ratio - 1])
     
     fmetrics = pd.DataFrame(fmetrics, columns=colnames)
-    fmetrics["Deviation<{:.0f}%".format(threshold * 100)] = (np.abs(fmetrics["Deviation"]) < threshold)
     
     # Secondary metrics
     fmetrics2 = []
@@ -227,7 +228,6 @@ def compute_fairness_metrics(aif_metric, threshold=0.2):
          acc_eq_ratio, acc_eq_ratio - 1])
     
     fmetrics2 = pd.DataFrame(fmetrics2, columns=colnames)
-    fmetrics2["Deviation<{:.0f}%".format(threshold * 100)] = (np.abs(fmetrics2["Deviation"]) < threshold)
 
     return fmetrics, fmetrics2
 
@@ -261,16 +261,8 @@ def plot_confusion_matrix_by_group(aif_metric, figsize=(16, 4)):
     return fig
 
 
-def plot_performance_by_group(aif_metric, metric_name, ax=None):
-    """Plot performance by group."""
-    def _add_annotations(ax):
-        for p in ax.patches:
-            ax.annotate(format(p.get_height(), '.3f'), 
-                        (p.get_x() + p.get_width() / 2., p.get_height()), 
-                        ha = 'center', va = 'center',
-                        xytext = (0, -10), textcoords = 'offset points')
-        
-    performance_metrics = ['TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC']
+def get_perf_measure_by_group(aif_metric, metric_name):
+    perf_measures = ['TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC']
     
     func_dict = {
         'selection_rate': lambda x: aif_metric.selection_rate(privileged=x),
@@ -282,7 +274,7 @@ def plot_performance_by_group(aif_metric, metric_name, ax=None):
         'error_rate': lambda x: aif_metric.error_rate(privileged=x),
     }
     
-    if metric_name in performance_metrics:
+    if metric_name in perf_measures:
         metric_func = lambda x: aif_metric.performance_measures(privileged=x)[metric_name]  
     elif metric_name in func_dict.keys():
         metric_func = func_dict[metric_name]
@@ -290,13 +282,27 @@ def plot_performance_by_group(aif_metric, metric_name, ax=None):
         raise NotImplementedError
         return
 
-    df = pd.DataFrame()
-    df['Group'] = ['all', 'privileged', 'unprivileged'] 
-    df[metric_name] = [metric_func(group) for group in [None, True, False]]
+    df = pd.DataFrame({
+        'Group': ['all', 'privileged', 'unprivileged'],
+        metric_name: [metric_func(group) for group in [None, True, False]],
+    })
+    return df
+
+
+def plot_performance_by_group(aif_metric, metric_name, ax=None):
+    """Plot performance by group."""
+    def _add_annotations(ax):
+        for p in ax.patches:
+            ax.annotate(format(p.get_height(), '.3f'), 
+                        (p.get_x() + p.get_width() / 2., p.get_height()), 
+                        ha = 'center', va = 'center',
+                        xytext = (0, -10), textcoords = 'offset points')
+        
+    df = get_perf_measure_by_group(aif_metric, metric_name)
 
     if ax is None:
         fig, ax = plt.subplots()
-    sns.barplot(x='Group',y=metric_name, data=df, ax=ax)
+    sns.barplot(x='Group', y=metric_name, data=df, ax=ax)
     ax.set_title('{} by group'.format(metric_name))
     ax.set_xlabel(None)
     
