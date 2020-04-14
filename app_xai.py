@@ -1,4 +1,5 @@
 import json
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -9,13 +10,12 @@ import matplotlib.pyplot as plt
 from aif360.metrics.classification_metric import ClassificationMetric
 
 from toolkit import pdp_plot, pdp_interact_plot
-from utils import load_pkl
 from constants import *
 
 
 @st.cache(allow_output_mutation=True)
 def load_model(filename):
-    return load_pkl(filename)
+    return pickle.load(open(filename, "rb"))
 
 
 @st.cache

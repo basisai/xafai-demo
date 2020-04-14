@@ -1,4 +1,4 @@
-alibi==0.3.2
+aif360==0.2.3
 altair==4.0.1
 numpy==1.18.2
 pandas==1.0.3
