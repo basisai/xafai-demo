@@ -33,7 +33,7 @@ def compute_shap_values(clf, x_sample):
     return explainer.shap_values(x_sample)[1]
     
 
-def main():
+def xai():
     max_width = st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
     st.markdown(
         f"""
@@ -60,10 +60,10 @@ def main():
     st.sidebar.title("SHAP Instructions")
     st.sidebar.info(
         "Set the relevant explainer in `compute_shap_values` for your model.\n"
-        "shap.TreeExplainer works with tree models.\n"
-        "shap.DeepExplainer works with Deep Learning models.\n"
-        "shap.KernelExplainer works with all models, though it is slower than other Explainers and it offers an approximation rather than exact Shap values."
-        "See Explainers[https://shap.readthedocs.io/en/latest/#explainers] for more details"
+        "- `shap.TreeExplainer` works with tree models.\n"
+        "- `shap.DeepExplainer` works with Deep Learning models.\n"
+        "- `shap.KernelExplainer` works with all models, though it is slower than other Explainers and it offers an approximation rather than exact Shap values.\n\n"
+        "See [Explainers](https://shap.readthedocs.io/en/latest/#explainers) for more details"
     )
     
     # Compute SHAP values
@@ -117,4 +117,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    xai()

@@ -53,7 +53,7 @@ def color_red(val, threshold=0.2):
     return 'color: %s' % color
     
 
-def main():
+def fai():
     max_width = st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
     st.markdown(
         f"""
@@ -153,4 +153,4 @@ def main():
 
     
 if __name__ == "__main__":
-    main()
+    fai()
