@@ -1,4 +1,5 @@
 import json
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,7 @@ import streamlit as st
 import shap
 import matplotlib.pyplot as plt
 from aif360.metrics.classification_metric import ClassificationMetric
+from sklearn.metrics import accuracy_score, precision_score, recall_score, classification_report
 
 from toolkit import (
     prepare_dataset,
@@ -14,13 +16,12 @@ from toolkit import (
     get_perf_measure_by_group,
     plot_confusion_matrix_by_group,
 )
-from utils import load_pkl
 from constants import *
 
 
 @st.cache(allow_output_mutation=True)
 def load_model(filename):
-    return load_pkl(filename)
+    return pickle.load(open(filename, "rb"))
 
 
 @st.cache
@@ -83,6 +84,13 @@ def main():
     grdtruth_val = prepare_dataset(x_val, y_val, **BIAS_INFO, **PRIVILEGED_INFO)
     predicted_val = prepare_dataset(x_val, y_pred, **BIAS_INFO, **PRIVILEGED_INFO)
     
+    st.header("Model performance")
+    st.text(f"Accuracy = {accuracy_score(y_val, y_pred):.4f}")
+    st.text(f"Precision = {precision_score(y_val, y_pred):.4f}")
+    st.text(f"Recall = {recall_score(y_val, y_pred):.4f}")
+    st.code(classification_report(y_val, y_pred))
+    
+    
     clf_metric = get_clf_metric(grdtruth_val, predicted_val, **PRIVILEGED_INFO)
     
     st.header("Algorithmic fairness metrics")
@@ -100,6 +108,7 @@ def main():
                 "- Statistical parity: equal proportion of predicted positives\n"
                 "- Equal opportunity: equal FNR\n"
                 "- Predictive parity: equal PPV")
+
     
     st.subheader("Performance metrics")
     all_perfs = []
