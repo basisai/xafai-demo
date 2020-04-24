@@ -71,21 +71,31 @@ def xai_indiv():
         unsafe_allow_html=True,
     )
     
-    st.title("Explanability AI Dashboard for Individual Instance")
+    st.title("Individual Instance Explainability")
     
     clf = load_model("output/lgb.pkl")
     sample = load_data("output/train.csv")
     x_sample = sample[FEATURES]
+    y_sample = sample[TARGET].values
     
     # Load explainer
     explainer = load_explainer(clf)
     
     # Select instance
-    row_to_show = st.slider("Select instance", 0, sample.shape[0], 0)
-    instance = x_sample.iloc[row_to_show: row_to_show + 1]
-    st.write(instance.T)
+    row = st.slider("Select instance", 0, sample.shape[0], 0)
+    instance = x_sample.iloc[row: row + 1]
+    
+    st.subheader("Feature values")
+    st.dataframe(instance.T)
+    
+    st.subheader("Actual label")
+    st.write(y_sample[row])
+    
+    st.subheader("Prediction")
+    st.text(clf.predict_proba(instance)[0])
     
     # Compute SHAP values
+    st.subheader("SHAP values")
     shap_value = explainer.shap_values(instance)[1][0]
     base_value = explainer.expected_value[1]
     

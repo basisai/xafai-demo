@@ -113,7 +113,7 @@ def xai():
         unsafe_allow_html=True,
     )
     
-    st.title("Explanability AI Dashboard")
+    st.title("Explainability AI Dashboard")
 
     st.sidebar.title("Model and Data Instructions")
     st.sidebar.info(
