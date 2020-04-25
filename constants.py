@@ -37,8 +37,8 @@ TARGET_NAMES = ['<=50K', '>50K']
 # For fairness AI app
 # List bias and privileged info
 BIAS_INFO = {
-    'favorable_label': 0,
-    'unfavorable_label': 1,
+    'favorable_label': 1,
+    'unfavorable_label': 0,
     'protected_columns': [
         'Race=Amer-Indian-Eskimo',
         'Race=Asian-Pac-Islander',

@@ -90,6 +90,18 @@ def fai():
     st.text(f"Model accuracy = {metrics.accuracy_score(y_val, y_pred):.4f}")
     st.text("." + metrics.classification_report(y_val, y_pred, digits=4))
     
+    st.header("Bias Information")
+    st.subheader("Favorable and Unfavorable labels")
+    st.text("Favorable label: {}".format(BIAS_INFO["favorable_label"]))
+    st.text("Unfavorable label: {}".format(BIAS_INFO["unfavorable_label"]))
+    
+    st.subheader("Protected Feature Columns")
+    st.text(BIAS_INFO["protected_columns"])
+    
+    st.subheader("Privileged and Unprivileged groups")
+    for k, v in PRIVILEGED_INFO.items():
+        st.text(f"{k}: {v}")
+    
     # Prepare val dataset
     grdtruth_val = prepare_dataset(x_val, y_val, **BIAS_INFO, **PRIVILEGED_INFO)
     predicted_val = prepare_dataset(x_val, y_pred, **BIAS_INFO, **PRIVILEGED_INFO)
