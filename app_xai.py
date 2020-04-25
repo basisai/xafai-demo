@@ -101,7 +101,7 @@ def pdp_heatmap(pdp_interact_out, feature_names):
 
 
 def xai():
-    max_width = st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
+    max_width = 1000  # st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
     st.markdown(
         f"""
         <style>
@@ -145,32 +145,33 @@ def xai():
     shap_values = compute_shap_values(clf, x_sample)
     
     # summarize the effects of all features
-    st.subheader("SHAP summary plot")
-    max_display = st.slider("Select number of top features to show", 10, 30, 10)
+    st.subheader("SHAP Summary Plots")
+    max_display = st.slider("Select number of top features to show", 15, min(30, len(FEATURES)))
     
     shap.summary_plot(shap_values, plot_type="bar", feature_names=FEATURES,
-                      max_display=max_display, plot_size=0.2, show=False)
+                      max_display=max_display, plot_size=[12, 6], show=False)
     plt.gcf().tight_layout()
     st.pyplot()
     
     shap.summary_plot(shap_values, x_sample, feature_names=FEATURES,
-                      max_display=max_display, plot_size=0.2, show=False)
+                      max_display=max_display, plot_size=[12, 6], show=False)
     plt.gcf().tight_layout()
     st.pyplot()
     
-    st.subheader("SHAP dependence contribution plots")
+    st.subheader("SHAP Dependence Contribution Plots")
     features = st.multiselect("Select two features", FEATURES, key="shap")
     if len(features) > 1:
         feat1, feat2 = features[:2]
-        shap.dependence_plot(feat1, shap_values, x_sample, interaction_index=feat2, show=False)
-        plt.gcf()#.tight_layout()
+        fig, ax = plt.subplots(figsize=(12, 6))
+        shap.dependence_plot(feat1, shap_values, x_sample, interaction_index=feat2,
+                             ax=ax, show=False)
         st.pyplot()
     
-    st.header("Partial dependence plots")
+    st.header("Partial Dependence Plots")
     st.sidebar.title("PDPbox Instructions")
     st.sidebar.info("[placeholder]")
     
-    st.subheader("Partial dependence plots")
+    st.subheader("Partial Dependence Plots")
     feature_name = st.selectbox("Select feature", NUMERIC_FEATS + CATEGORICAL_FEATS)
 #     if feature_name in CATEGORICAL_FEATS:
 #         feature = CATEGORY_MAP[feature_name]
@@ -184,7 +185,7 @@ def xai():
     pdp_isolate_out = compute_pdp_isolate(clf, x_sample, feature)
     st.altair_chart(pdp_chart(pdp_isolate_out, feature_name), use_container_width=True)
     
-    st.subheader("Partial dependence interaction plots")
+    st.subheader("Partial Dependence Interaction Plots")
     feature_names = st.multiselect("Select two features", CATEGORICAL_FEATS + NUMERIC_FEATS, key="pdp")
     if len(feature_names) > 1:
         feature_name1, feature_name2 = feature_names[:2]

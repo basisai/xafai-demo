@@ -59,7 +59,7 @@ def plot_waterfall(source):
 
 
 def xai_indiv():
-    max_width = st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
+    max_width = 1000  #st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
     st.markdown(
         f"""
         <style>

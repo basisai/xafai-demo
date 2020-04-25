@@ -8,6 +8,7 @@ import seaborn as sns
 from aif360.datasets import BinaryLabelDataset
 from aif360.metrics.classification_metric import ClassificationMetric
 from pdpbox import pdp, info_plots
+from IPython.display import display
 
 plt.style.use('seaborn-darkgrid')
 
@@ -158,6 +159,10 @@ def get_fairness(grdtruth,
                  threshold=0.2):
     """Fairness wrapper function."""
     clf_metric = ClassificationMetric(grdtruth, predicted, unprivileged_groups, privileged_groups)
+    fmeasures = compute_fairness_metrics(clf_metric)
+    
+    print(f"Fairness is when deviation < {threshold}")
+    display(fmeasures.iloc[:3].style.applymap(lambda x: color_red(x, threshold), subset=['Deviation']))
     
     fig_confmats = plot_confusion_matrix_by_group(clf_metric)
     
@@ -168,68 +173,97 @@ def get_fairness(grdtruth,
             'specificity', 'power', 'error_rate']):
         plot_performance_by_group(clf_metric, metric_name, ax=axs[i // 4][i % 4])
     
-    print(f"Fairness is when deviation < {threshold}")
-    metrics, metrics_others = compute_fairness_metrics(clf_metric, threshold=threshold)
-    return metrics, metrics_others, fig_confmats, fig_perfs
+    return fmeasures, fig_confmats, fig_perfs
 
 
-def compute_fairness_metrics(aif_metric, threshold=0.2):
+def compute_fairness_metrics(aif_metric):
     """Compute and report fairness metrics."""
-    colnames = ["Metric name", "Definition", "Criterion", "Ratio", "Deviation"]
+    colnames = ["Metric", "Criterion", "All", "Unprivileged", "Privileged", "Ratio", "Deviation"]
     
-    # Primary metrics
-    fmetrics = []
+    fmeasures = []
 
     # Statistical parity
     disparate_impact = aif_metric.disparate_impact()
-    fmetrics.append(
-        ["Statistical parity", "equal proportion of predicted positives", "Independence",
-         disparate_impact, disparate_impact - 1])
+    fmeasures.append([
+        "Statistical parity",
+        "Independence",
+        aif_metric.selection_rate(),
+        aif_metric.selection_rate(False),
+        aif_metric.selection_rate(True),
+        disparate_impact,
+        disparate_impact - 1,
+    ])
     
     # Equal opportunity: equal FNR
     fnr_ratio = aif_metric.false_negative_rate_ratio()
-    fmetrics.append(
-        ["Equal opportunity", "equal FNR", "Separation",
-         fnr_ratio, fnr_ratio - 1])
+    fmeasures.append([
+        "Equal opportunity",
+        "Separation",
+        aif_metric.false_negative_rate(),
+        aif_metric.false_negative_rate(False),
+        aif_metric.false_negative_rate(True),
+        fnr_ratio,
+        fnr_ratio - 1,
+    ])
     
     # Predictive parity: equal PPV
-    unpriv = aif_metric.positive_predictive_value(False)
-    priv = aif_metric.positive_predictive_value(True)
-    ppv_ratio = unpriv / priv
-    fmetrics.append(
-        ["Predictive parity", "equal PPV", "Sufficiency",
-         ppv_ratio, ppv_ratio - 1])
-    
-    fmetrics = pd.DataFrame(fmetrics, columns=colnames)
-    
-    # Secondary metrics
-    fmetrics2 = []
+    ppv_all = aif_metric.positive_predictive_value()
+    ppv_up = aif_metric.positive_predictive_value(False)
+    ppv_p = aif_metric.positive_predictive_value(True)
+    ppv_ratio = ppv_up / ppv_p
+    fmeasures.append([
+        "Predictive parity",
+        "Sufficiency",
+        ppv_all,
+        ppv_up,
+        ppv_p,
+        ppv_ratio,
+        ppv_ratio - 1,
+    ])
     
     # Predictive equality: equal FPR
     fpr_ratio = aif_metric.false_positive_rate_ratio()
-    fmetrics2.append(
-        ["Predictive equality", "equal FPR", "Separation",
-         fpr_ratio, fpr_ratio - 1])
+    fmeasures.append([
+        "Predictive equality",
+        "Separation",
+        aif_metric.false_positive_rate(),
+        aif_metric.false_positive_rate(False),
+        aif_metric.false_positive_rate(True),
+        fpr_ratio,
+        fpr_ratio - 1,
+    ])
 
     # Equalized odds: equal TPR and equal FPR
-    unpriv = (aif_metric.true_positive_rate(False) + aif_metric.false_positive_rate(False)) / 2
-    priv = (aif_metric.true_positive_rate(True) + aif_metric.false_positive_rate(True)) / 2
-    avg_odds_ratio = unpriv / priv
-    fmetrics2.append(
-        ["Equalized odd", "equal TPR and equal FPR", "Separation",
-         avg_odds_ratio, avg_odds_ratio - 1])
+    eqodds_all = (aif_metric.true_positive_rate() + aif_metric.false_positive_rate()) / 2
+    eqodds_up = (aif_metric.true_positive_rate(False) + aif_metric.false_positive_rate(False)) / 2
+    eqodds_p = (aif_metric.true_positive_rate(True) + aif_metric.false_positive_rate(True)) / 2
+    eqodds_ratio = eqodds_up / eqodds_p
+    fmeasures.append([
+        "Equalized odd",
+        "Separation",
+        eqodds_all,
+        eqodds_up,
+        eqodds_p,
+        eqodds_ratio,
+        eqodds_ratio - 1,
+    ])
     
     # Conditional use accuracy equality: equal PPV and equal NPV
-    unpriv = (aif_metric.positive_predictive_value(False) + aif_metric.negative_predictive_value(False)) / 2
-    priv = (aif_metric.positive_predictive_value(True) + aif_metric.negative_predictive_value(True)) / 2
-    acc_eq_ratio = unpriv / priv
-    fmetrics2.append(
-        ["Conditional use accuracy equality", "equal PPV and equal NPV", "Sufficiency",
-         acc_eq_ratio, acc_eq_ratio - 1])
-    
-    fmetrics2 = pd.DataFrame(fmetrics2, columns=colnames)
+    acceq_all = (aif_metric.positive_predictive_value(False) + aif_metric.negative_predictive_value(False)) / 2
+    acceq_up = (aif_metric.positive_predictive_value(False) + aif_metric.negative_predictive_value(False)) / 2
+    acceq_p = (aif_metric.positive_predictive_value(True) + aif_metric.negative_predictive_value(True)) / 2
+    acceq_ratio = acceq_up / acceq_p
+    fmeasures.append([
+        "Conditional use accuracy equality",
+        "Sufficiency",
+        acceq_all,
+        acceq_up,
+        acceq_p,
+        acceq_ratio,
+        acceq_ratio - 1,
+    ])
 
-    return fmetrics, fmetrics2
+    return pd.DataFrame(fmeasures, columns=colnames)
 
 
 def plot_confusion_matrix_by_group(aif_metric, figsize=(16, 4)):
@@ -307,3 +341,13 @@ def plot_performance_by_group(aif_metric, metric_name, ax=None):
     ax.set_xlabel(None)
     
     _add_annotations(ax)
+
+    
+def color_red(val, threshold=0.2):
+    """
+    Takes a scalar and returns a string with
+    the css property `'color: red'` for negative
+    strings, black otherwise.
+    """
+    color = 'red' if abs(val) > threshold else 'black'
+    return 'color: %s' % color
