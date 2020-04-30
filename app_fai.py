@@ -74,8 +74,10 @@ def fai():
     
     st.title("Fairness AI Dashboard")
     
-    st.sidebar.title("Model and Data Instructions")
-    st.sidebar.info("Write your own `load_model`, `load_data` functions.")
+    st.sidebar.title("Instructions")
+    st.sidebar.info("- See `Global explainability` page for instructions on model and data.\n"
+                    "- Also set `BIAS_INFO` and `PRIVILEGED_INFO` in `constants.py`.\n"
+                    "- Algorithmic fairness is only for binary classification problems.")
 
     # Load sample, data
     clf = load_model("output/lgb.pkl")
@@ -109,8 +111,6 @@ def fai():
     clf_metric = get_clf_metric(grdtruth_val, predicted_val, **PRIVILEGED_INFO)
     
     st.header("Algorithmic Fairness Metrics")
-    st.sidebar.title("Fairness Instructions")
-    st.sidebar.info("Only for binary classification problems.")
     
     threshold = st.slider("Set fairness threshold", 0., 1., 0.2, 0.05)
     st.write(f"Fairness is when **absolute deviation < {threshold}**.")

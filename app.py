@@ -6,7 +6,9 @@ from app_xai_indiv import xai_indiv
 
 
 def main():
-    select = st.sidebar.selectbox("Select dashboard", ["Global explainability", "Fairness", "Individual explainability"])
+    select = st.sidebar.selectbox(
+        "Select dashboard", ["Global explainability", "Individual explainability", "Fairness"])
+    
     if select == "Global explainability":
         xai()
     elif select == "Fairness":

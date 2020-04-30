@@ -117,10 +117,10 @@ def xai():
 
     st.sidebar.title("Model and Data Instructions")
     st.sidebar.info(
-        "Write your own `load_model`, `load_data` functions.\n"
-        "Model must be a fitted `sklearn` model.\n"
-        "Sample data must be a pandas.DataFrame"
-        "Feature names and a category map for one-hot encoded features must be "
+        "- Write your own `load_model`, `load_data` functions.\n"
+        "- Model must be a fitted `sklearn` model.\n"
+        "- Sample data must be a `pandas.DataFrame`.\n"
+        "- Feature names and a category map for one-hot encoded features must be "
         "furnished in `constants.py`."
     )
     
@@ -133,12 +133,12 @@ def xai():
     st.sidebar.title("SHAP Instructions")
     st.sidebar.info(
         "Set the relevant explainer in `compute_shap_values` for your model.\n"
-        "shap.TreeExplainer works with tree models.\n"
-        "shap.DeepExplainer works with Deep Learning models.\n"
-        "shap.KernelExplainer works with all models, though it is slower than "
+        "- `shap.TreeExplainer` works with tree models.\n"
+        "- `shap.DeepExplainer` works with Deep Learning models.\n"
+        "- `shap.KernelExplainer` works with all models, though it is slower than "
         "other Explainers and it offers an approximation rather than exact "
-        "Shap values."
-        "See Explainers[https://shap.readthedocs.io/en/latest/#explainers] for more details"
+        "Shap values.\n\n"
+        "See [Explainers](https://shap.readthedocs.io/en/latest/#explainers) for more details."
     )
     
     # Compute SHAP values
@@ -168,8 +168,6 @@ def xai():
         st.pyplot()
     
     st.header("Partial Dependence Plots")
-    st.sidebar.title("PDPbox Instructions")
-    st.sidebar.info("[placeholder]")
     
     st.subheader("Partial Dependence Plots")
     feature_name = st.selectbox("Select feature", NUMERIC_FEATS + CATEGORICAL_FEATS)
