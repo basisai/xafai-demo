@@ -17,14 +17,34 @@ from app_xai import load_model, load_data
 
 
 @st.cache
-def compute_preds(clf, x_val):
-    y_prob = clf.predict_proba(x_val)[:, 1]
-    return (y_prob > 0.5).astype(int)
-
+def compute_proba(clf, x_val):
+    return clf.predict_proba(x_val)[:, 1]
+     
 
 @st.cache(allow_output_mutation=True)
 def get_clf_metric(grdtruth, predicted, unprivileged_groups, privileged_groups):
     return ClassificationMetric(grdtruth, predicted, unprivileged_groups, privileged_groups)
+
+
+def plot_hist(source):
+    base = alt.Chart(source)
+    chart = base.mark_area(
+        opacity=0.5, interpolate="step",
+    ).encode(
+        alt.X("Predicted Probability:Q", bin=alt.Bin(maxbins=20), title="Predicted Probability"),
+        alt.Y("count()", stack=None),
+        alt.Color("Actual Target:N"),
+    )
+    rule = base.mark_rule(color="red").encode(
+        alt.X("Cutoff:Q"),
+        size=alt.value(2),
+    )
+    mean = base.mark_rule().encode(
+        alt.X("mean(Predicted Probability):Q"),
+        alt.Color("Actual Target:N"),
+        size=alt.value(2),
+    )
+    return chart + rule + mean
 
 
 def plot_fmeasures_bar(df0, threshold):
@@ -42,9 +62,11 @@ def plot_fmeasures_bar(df0, threshold):
     )
     rule1 = base.mark_rule(color="red").encode(
         alt.X("min_val:Q"),
+        size=alt.value(2),
     )
     rule2 = base.mark_rule(color="red").encode(
         alt.X("max_val:Q", title="Deviation"),
+        size=alt.value(2),
     )
     return bar + rule1 + rule2
 
@@ -77,25 +99,12 @@ def fai():
     st.sidebar.title("Instructions")
     st.sidebar.info("- See `Global explainability` page for instructions on model and data.\n"
                     "- Also set `BIAS_INFO` and `PRIVILEGED_INFO` in `constants.py`.\n"
-                    "- Algorithmic fairness is only for binary classification problems.")
-
-    # Load sample, data
-    clf = load_model("output/lgb.pkl")
-    val = load_data("output/val.csv")
-    x_val = val[FEATURES]
-    y_val = val[TARGET]
-
-    # Predict on val data
-    y_pred = compute_preds(clf, x_val)
-    
-    st.header("Model Performance")
-    st.text(f"Model accuracy = {metrics.accuracy_score(y_val, y_pred):.4f}")
-    st.text("." + metrics.classification_report(y_val, y_pred, digits=4))
+                    "- Algorithmic fairness is only for binary classification.")
     
     st.header("Bias Information")
-    st.subheader("Favorable and Unfavorable labels")
-    st.text("Favorable label: {}".format(BIAS_INFO["favorable_label"]))
-    st.text("Unfavorable label: {}".format(BIAS_INFO["unfavorable_label"]))
+    st.subheader("Favourable and Unfavourable labels")
+    st.text("Favourable label: {}".format(BIAS_INFO["favorable_label"]))
+    st.text("Unfavourable label: {}".format(BIAS_INFO["unfavorable_label"]))
     
     st.subheader("Protected Feature Columns")
     st.text(BIAS_INFO["protected_columns"])
@@ -103,6 +112,31 @@ def fai():
     st.subheader("Privileged and Unprivileged groups")
     for k, v in PRIVILEGED_INFO.items():
         st.text(f"{k}: {v}")
+
+    # Load sample, data
+    clf = load_model("output/lgb.pkl")
+    val = load_data("output/val.csv")
+    x_val = val[FEATURES]
+    y_val = val[TARGET].values
+
+    # Predict on val data
+    y_prob = compute_proba(clf, x_val)
+    
+    st.header("Prediction Distributions")
+    cutoff = st.slider("Set probability cutoff", 0., 1., 0.5, 0.01, key="proba")
+    y_pred = (y_prob > cutoff).astype(int)
+    
+    source = pd.DataFrame({
+        "Actual Target": y_val,
+        "Predicted Probability": y_prob,
+    })
+    source["Cutoff"] = cutoff
+    hist = plot_hist(source)
+    st.altair_chart(hist, use_container_width=True)
+    
+    st.header("Model Performance")
+    st.text(f"Model accuracy = {metrics.accuracy_score(y_val, y_pred):.4f}")
+    st.text("." + metrics.classification_report(y_val, y_pred, digits=4))
     
     # Prepare val dataset
     grdtruth_val = prepare_dataset(x_val, y_val, **BIAS_INFO, **PRIVILEGED_INFO)
@@ -112,17 +146,17 @@ def fai():
     
     st.header("Algorithmic Fairness Metrics")
     
-    threshold = st.slider("Set fairness threshold", 0., 1., 0.2, 0.05)
-    st.write(f"Fairness is when **absolute deviation < {threshold}**.")
+    fthresh = st.slider("Set fairness threshold", 0., 1., 0.2, 0.05, key="fairness")
+    st.write(f"Fairness is when **absolute deviation < {fthresh}**.")
     
     fmeasures = compute_fairness_metrics(clf_metric)
     
-    chart = plot_fmeasures_bar(fmeasures.iloc[:3], threshold)
+    chart = plot_fmeasures_bar(fmeasures.iloc[:3], fthresh)
     st.altair_chart(chart, use_container_width=True)
     
     st.dataframe(
         fmeasures.iloc[:3]
-        .style.applymap(lambda x: color_red(x, threshold), subset=['Deviation'])
+        .style.applymap(lambda x: color_red(x, fthresh), subset=['Deviation'])
     )
     
     st.subheader("Performance Metrics")
