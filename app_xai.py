@@ -6,21 +6,8 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from pdpbox import pdp
 
+from app_utils import load_model, load_data
 from constants import *
-
-
-@st.cache(allow_output_mutation=True)
-def load_model(filename):
-    import pickle
-    return pickle.load(open(filename, "rb"))
-
-
-@st.cache
-def load_data(filename, sample_size=None, random_state=0):
-    df = pd.read_csv(filename)
-    if sample_size is None:
-        return df
-    return df.sample(sample_size, random_state=random_state)
 
 
 @st.cache

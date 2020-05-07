@@ -6,14 +6,14 @@ import matplotlib.pyplot as plt
 from aif360.metrics.classification_metric import ClassificationMetric
 from sklearn import metrics
 
+from app_utils import load_model, load_data
+from constants import *
 from toolkit import (
     prepare_dataset,
     compute_fairness_metrics,
     get_perf_measure_by_group,
     plot_confusion_matrix_by_group,
 )
-from constants import *
-from app_xai import load_model, load_data
 
 
 @st.cache
@@ -200,7 +200,7 @@ def fai():
 #     )
 #     st.altair_chart(rects + text, use_container_width=False)
     
-    st.header("Appendix")
+    st.header("Notes")
     
     st.write("**Statistical parity**:")
     st.latex(r"\frac{\text{Selection Rate}(D=\text{unprivileged})}{\text{Selection Rate}(D=\text{privileged})}")
