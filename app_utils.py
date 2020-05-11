@@ -1,6 +1,7 @@
 import pickle
 
 import pandas as pd
+import shap
 import streamlit as st
 
 
@@ -15,3 +16,19 @@ def load_data(filename, sample_size=None, random_state=0):
     if sample_size is None:
         return df
     return df.sample(sample_size, random_state=random_state)
+
+
+@st.cache(allow_output_mutation=True)
+def predict(clf, x):
+    """
+    For classification, predict probabilities.
+    For regression, predict scores.
+    """
+    return clf.predict_proba(x)[:, 1]
+
+
+@st.cache(allow_output_mutation=True)
+def compute_shap_values(clf, x):
+    # Use the relevant explainer
+    explainer = shap.TreeExplainer(clf)
+    return explainer.shap_values(x)[1]

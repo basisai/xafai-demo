@@ -178,7 +178,7 @@ def get_fairness(grdtruth,
 
 def compute_fairness_metrics(aif_metric):
     """Compute and report fairness metrics."""
-    colnames = ["Metric", "Criterion", "All", "Unprivileged", "Privileged", "Ratio", "Deviation"]
+    colnames = ["Metric", "Criterion", "All", "Unprivileged", "Privileged", "Ratio"]
     
     fmeasures = []
 
@@ -191,7 +191,6 @@ def compute_fairness_metrics(aif_metric):
         aif_metric.selection_rate(False),
         aif_metric.selection_rate(True),
         disparate_impact,
-        disparate_impact - 1,
     ])
     
     # Equal opportunity: equal FNR
@@ -203,7 +202,6 @@ def compute_fairness_metrics(aif_metric):
         aif_metric.false_negative_rate(False),
         aif_metric.false_negative_rate(True),
         fnr_ratio,
-        fnr_ratio - 1,
     ])
     
     # Predictive parity: equal PPV
@@ -218,7 +216,6 @@ def compute_fairness_metrics(aif_metric):
         ppv_up,
         ppv_p,
         ppv_ratio,
-        ppv_ratio - 1,
     ])
     
     # Predictive equality: equal FPR
@@ -230,7 +227,6 @@ def compute_fairness_metrics(aif_metric):
         aif_metric.false_positive_rate(False),
         aif_metric.false_positive_rate(True),
         fpr_ratio,
-        fpr_ratio - 1,
     ])
 
     # Equalized odds: equal TPR and equal FPR
@@ -245,7 +241,6 @@ def compute_fairness_metrics(aif_metric):
         eqodds_up,
         eqodds_p,
         eqodds_ratio,
-        eqodds_ratio - 1,
     ])
     
     # Conditional use accuracy equality: equal PPV and equal NPV
@@ -260,7 +255,6 @@ def compute_fairness_metrics(aif_metric):
         acceq_up,
         acceq_p,
         acceq_ratio,
-        acceq_ratio - 1,
     ])
 
     return pd.DataFrame(fmeasures, columns=colnames)
@@ -343,11 +337,5 @@ def plot_performance_by_group(aif_metric, metric_name, ax=None):
     _add_annotations(ax)
 
     
-def color_red(val, threshold=0.2):
-    """
-    Takes a scalar and returns a string with
-    the css property `'color: red'` for negative
-    strings, black otherwise.
-    """
-    color = 'red' if abs(val) > threshold else 'black'
-    return 'color: %s' % color
+def color_red(x):
+    return "color: red" if x == "No" else "color: black"

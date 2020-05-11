@@ -1,19 +1,19 @@
 import streamlit as st
 
-from app_xai import xai
-from app_fai import fai
-from app_xai_indiv import xai_indiv
+from xai_fairness.app_xai import xai
+from xai_fairness.app_fai import fai
+from xai_fairness.app_xai_indiv import xai_indiv
 
 
 def main():
     select = st.sidebar.selectbox(
-        "Select dashboard", ["Global explainability", "Individual explainability", "Fairness"])
+        "Select dashboard", ["Global explainability", "Fairness", "Individual explainability"])
     
     if select == "Global explainability":
         xai()
     elif select == "Fairness":
         fai()
-    else:
+    elif select == "Individual explainability":
         xai_indiv()
     
     

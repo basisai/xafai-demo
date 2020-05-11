@@ -3,10 +3,10 @@ import shap
 import streamlit as st
 
 from app_utils import load_model, load_data
-from xai_utils import *
 from constants import *
-    
+from .xai_utils import *
 
+    
 def xai_indiv():
     max_width = 1000  #st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
     st.markdown(
@@ -45,7 +45,10 @@ def xai_indiv():
     
     # Compute SHAP values
     st.subheader("SHAP values")
-    plot_shap_waterfall(explainer, instance, max_display=20)
+    shap_values = explainer.shap_values(instance)[1][0]
+    base_value = explainer.expected_value[1]
+    source = make_source_waterfall(instance, base_value, shap_values, max_display=20)
+    st.altair_chart(waterfall_chart(source), use_container_width=True)
     
 
 if __name__ == "__main__":

@@ -17,20 +17,19 @@ def make_source_waterfall(instance, base_value, shap_values, max_display=10):
     
     
     _df = df.iloc[:max_display]
-    _df1 = pd.DataFrame({"feature": ["Others"],
-                         "shap_value": [remaining],
-                         "val_": [remaining]})
-    _df = pd.concat([_df, _df1], axis=0, ignore_index=True)
     
     df0 = pd.DataFrame({"feature": ["Average Model Output"],
                         "shap_value": [base_value],
                         "val_": [base_value]})
     df1 = _df.query("shap_value > 0").sort_values("shap_value", ascending=False)
-    df2 = _df.query("shap_value < 0").sort_values("shap_value")
-    df3 = pd.DataFrame({"feature": ["Individual Observation"],
+    df2 = pd.DataFrame({"feature": ["Others"],
+                        "shap_value": [remaining],
+                        "val_": [remaining]})
+    df3 = _df.query("shap_value < 0").sort_values("shap_value")
+    df4 = pd.DataFrame({"feature": ["Individual Observation"],
                         "shap_value": [output_value],
                         "val_": [0]})
-    source = pd.concat([df0, df1, df2, df3], axis=0, ignore_index=True)
+    source = pd.concat([df0, df1, df2, df3, df4], axis=0, ignore_index=True)
     
     source["close"] = source["val_"].cumsum()
     source["open"] = source["close"].shift(1)
@@ -48,14 +47,17 @@ def waterfall_chart(source):
         alt.Y("open:Q", title="log odds", scale=alt.Scale(zero=False)),
         alt.Y2("close:Q"),
         color=alt.condition(
-            "datum.open <= datum.close", alt.value("#FF0D57"), alt.value("#1E88E5")),
+            "datum.open <= datum.close",
+            alt.value("#FF0D57"),
+            alt.value("#1E88E5"),
+        ),
         tooltip=["feature", "feature_value", "shap_value"],
     )
-    return chart
-
-
-def plot_shap_waterfall(explainer, _instance, max_display=10):
-    _shap_values = explainer.shap_values(_instance)[1][0]
-    _base_value = explainer.expected_value[1]
-    source = make_source_waterfall(_instance, _base_value, _shap_values, max_display=max_display)
-    st.altair_chart(waterfall_chart(source), use_container_width=True)
+    chart2 = chart.encode(
+        color=alt.condition(
+            "datum.feature == 'Average Model Output' || datum.feature == 'Individual Observation'",
+            alt.value("#F7E0B6"),
+            alt.value(""),
+        ),
+    )
+    return chart + chart2
