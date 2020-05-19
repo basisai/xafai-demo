@@ -162,7 +162,7 @@ def get_fairness(grdtruth,
     fmeasures = compute_fairness_metrics(clf_metric)
     
     print(f"Fairness is when deviation < {threshold}")
-    display(fmeasures.iloc[:3].style.applymap(lambda x: color_red(x, threshold), subset=['Deviation']))
+    display(fmeasures.iloc[:3].style.applymap(color_red, subset=["Fair?"]))
     
     fig_confmats = plot_confusion_matrix_by_group(clf_metric)
     
@@ -178,20 +178,7 @@ def get_fairness(grdtruth,
 
 def compute_fairness_metrics(aif_metric):
     """Compute and report fairness metrics."""
-    colnames = ["Metric", "Criterion", "All", "Unprivileged", "Privileged", "Ratio"]
-    
     fmeasures = []
-
-    # Statistical parity
-    disparate_impact = aif_metric.disparate_impact()
-    fmeasures.append([
-        "Statistical parity",
-        "Independence",
-        aif_metric.selection_rate(),
-        aif_metric.selection_rate(False),
-        aif_metric.selection_rate(True),
-        disparate_impact,
-    ])
     
     # Equal opportunity: equal FNR
     fnr_ratio = aif_metric.false_negative_rate_ratio()
@@ -216,6 +203,17 @@ def compute_fairness_metrics(aif_metric):
         ppv_up,
         ppv_p,
         ppv_ratio,
+    ])
+
+    # Statistical parity
+    disparate_impact = aif_metric.disparate_impact()
+    fmeasures.append([
+        "Statistical parity",
+        "Independence",
+        aif_metric.selection_rate(),
+        aif_metric.selection_rate(False),
+        aif_metric.selection_rate(True),
+        disparate_impact,
     ])
     
     # Predictive equality: equal FPR
@@ -257,7 +255,8 @@ def compute_fairness_metrics(aif_metric):
         acceq_ratio,
     ])
 
-    return pd.DataFrame(fmeasures, columns=colnames)
+    return pd.DataFrame(fmeasures, columns=[
+        "Metric", "Criterion", "All", "Unprivileged", "Privileged", "Ratio"])
 
 
 def plot_confusion_matrix_by_group(aif_metric, figsize=(16, 4)):
@@ -308,7 +307,6 @@ def get_perf_measure_by_group(aif_metric, metric_name):
         metric_func = func_dict[metric_name]
     else:
         raise NotImplementedError
-        return
 
     df = pd.DataFrame({
         'Group': ['all', 'privileged', 'unprivileged'],

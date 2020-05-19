@@ -6,16 +6,13 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from pdpbox import pdp
 
-from app_utils import load_model, load_data, compute_shap_values
-from constants import *
-
 
 @st.cache(allow_output_mutation=True)
-def compute_pdp_isolate(model, dataset, feature):
+def compute_pdp_isolate(model, dataset, model_features, feature):
     pdp_isolate_out = pdp.pdp_isolate(
         model=model,
         dataset=dataset,
-        model_features=FEATURES,
+        model_features=model_features,
         feature=feature,
         num_grid_points=15,
     )
@@ -47,11 +44,11 @@ def pdp_chart(pdp_isolate_out, feature_name):
 
 
 @st.cache(allow_output_mutation=True)
-def compute_pdp_interact(model, dataset, features):
+def compute_pdp_interact(model, dataset, model_features, features):
     pdp_interact_out = pdp.pdp_interact(
         model=model,
         dataset=dataset,
-        model_features=FEATURES,
+        model_features=model_features,
         features=features,
     )
     return pdp_interact_out
@@ -80,33 +77,60 @@ def pdp_heatmap(pdp_interact_out, feature_names):
     return chart
 
 
-def xai_summary(x_sample, shap_values, max_display):
+@st.cache
+def compute_corrcoef(x_sample, y_prob, shap_values, max_display):
+    output_df = pd.DataFrame({
+        "feature": x_sample.columns,
+        "value": np.abs(shap_values).mean(axis=0),
+    })
+    output_df.sort_values("value", ascending=False, inplace=True, ignore_index=True)
+    output_df = output_df.iloc[:max_display]
+    
+    corrcoef = []
+    for col in output_df["feature"].values:
+        df_ = pd.DataFrame({"x": x_sample[col], "y": y_prob})
+        corrcoef.append(df_.corr(method='pearson').values[0, 1])
+    output_df["corrcoef"] = corrcoef
+    
+    return output_df
+
+
+def xai_summary(shap_df, x_sample, shap_values, feature_names, max_display):
     st.subheader("SHAP Summary Plots of Top Features")
-    shap.summary_plot(shap_values, plot_type="bar", feature_names=FEATURES,
+    
+    chart = alt.Chart(shap_df).mark_bar().encode(
+        x=alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
+        y=alt.Y("feature", title="", sort="-x"),
+        color=alt.condition(
+            "datum.corrcoef > 0",
+            alt.value("#FF0D57"),
+            alt.value("#1E88E5"),
+        ),
+        tooltip=["feature", "value"],
+    )
+    st.altair_chart(chart, use_container_width=True)
+    st.write("Note: Red - positive Pearson correlation between the feature and model output; "
+             "Blue - negative correlation.")
+    
+#     shap.summary_plot(shap_values, plot_type="bar", feature_names=feature_names,
+#                       max_display=max_display, plot_size=[12, 6], show=False)
+#     plt.gcf().tight_layout()
+#     st.pyplot()
+    
+    shap.summary_plot(shap_values, x_sample, feature_names=feature_names,
                       max_display=max_display, plot_size=[12, 6], show=False)
     plt.gcf().tight_layout()
     st.pyplot()
     
-    shap.summary_plot(shap_values, x_sample, feature_names=FEATURES,
-                      max_display=max_display, plot_size=[12, 6], show=False)
-    plt.gcf().tight_layout()
-    st.pyplot()
+    feats_ = shap_df["feature"].values[:5]
+    st.write("The top 5 features are `" + "`, `".join(feats_) + "`.")
     
     
-def static_xai(clf, x_sample, shap_values, top_features):
-    st.subheader("SHAP Dependence Contribution Plots")
-    
-    for i in range(5):
-        for j in range(i + 1, 5):
-            fig, ax = plt.subplots(figsize=(12, 6))
-            shap.dependence_plot(top_features[i], shap_values, x_sample, interaction_index=top_features[j],
-                                 ax=ax, show=False)
-            st.pyplot()
-    
+def model_xai(model, x_sample, top_features, feature_names, category_map):
     st.subheader("Partial Dependence Plots of Top Features")
     # PDPbox does not allow NaNs
     _x_sample = x_sample.fillna(0)
-    rev_category_map = {e: k for k, v in CATEGORY_MAP.items() for e in v}
+    rev_category_map = {e: k for k, v in category_map.items() for e in v}
     _top_features = []
     for feature_name in top_features:
         if feature_name in rev_category_map.keys() and rev_category_map[feature_name] not in _top_features:
@@ -115,7 +139,75 @@ def static_xai(clf, x_sample, shap_values, top_features):
             _top_features.append(feature_name)
 
     for feature_name in _top_features:
-        feature = CATEGORY_MAP.get(feature_name) or feature_name
-        pdp_isolate_out = compute_pdp_isolate(clf, _x_sample, feature)
-        st.altair_chart(pdp_chart(pdp_isolate_out, feature_name), use_container_width=True)
+        feature = category_map.get(feature_name) or feature_name
+        pdp_isolate_out = compute_pdp_isolate(model, _x_sample, feature_names, feature)
         
+        if not isinstance(pdp_isolate_out, list):
+            pdp_isolate_out = [pdp_isolate_out]
+        
+        for pdp_out in pdp_isolate_out:
+            st.altair_chart(pdp_chart(pdp_out, feature_name), use_container_width=True)
+
+
+def make_source_waterfall(instance, base_value, shap_values, max_display=10):
+    df = pd.melt(instance)
+    df.columns = ["feature", "feature_value"]
+    df["shap_value"] = shap_values
+
+    df["val_"] = df["shap_value"].abs()
+    df = df.sort_values("val_", ascending=False)
+
+    df["val_"] = df["shap_value"]
+    remaining = df["shap_value"].iloc[max_display:].sum()
+    output_value = df["shap_value"].sum() + base_value
+
+    _df = df.iloc[:max_display]
+
+    df0 = pd.DataFrame({"feature": ["Average Model Output"],
+                        "shap_value": [base_value],
+                        "val_": [base_value]})
+    df1 = _df.query("shap_value > 0").sort_values("shap_value", ascending=False)
+    df2 = pd.DataFrame({"feature": ["Others"],
+                        "shap_value": [remaining],
+                        "val_": [remaining]})
+    df3 = _df.query("shap_value < 0").sort_values("shap_value")
+    df4 = pd.DataFrame({"feature": ["Individual Observation"],
+                        "shap_value": [output_value],
+                        "val_": [0]})
+    source = pd.concat([df0, df1, df2, df3, df4], axis=0, ignore_index=True)
+
+    source["close"] = source["val_"].cumsum()
+    source["open"] = source["close"].shift(1)
+    source.loc[len(source) - 1, "open"] = 0
+    source["open"].fillna(0, inplace=True)
+
+    source["feature_value"] = source["feature_value"].round(6).astype(str)
+    source["shap_value"] = source["shap_value"].round(6).astype(str)
+    return source
+
+
+def waterfall_chart(source):
+    chart = alt.Chart(source).mark_bar().encode(
+        alt.X("feature:O", sort=source["feature"].tolist()),
+        alt.Y("open:Q", scale=alt.Scale(zero=False)),
+        alt.Y2("close:Q"),
+        color=alt.condition(
+            "datum.open <= datum.close",
+            alt.value("#FF0D57"),
+            alt.value("#1E88E5"),
+        ),
+        tooltip=["feature", "feature_value", "shap_value"],
+    )
+    chart2 = chart.encode(
+        color=alt.condition(
+            "datum.feature == 'Average Model Output' || datum.feature == 'Individual Observation'",
+            alt.value("#F7E0B6"),
+            alt.value(""),
+        ),
+    )
+    return chart + chart2
+
+
+def indiv_xai(instance, base_value, shap_values, max_display=20):
+    source = make_source_waterfall(instance, base_value, shap_values, max_display=max_display)
+    st.altair_chart(waterfall_chart(source), use_container_width=True)
