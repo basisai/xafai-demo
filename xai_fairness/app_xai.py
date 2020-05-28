@@ -76,13 +76,12 @@ def xai():
     st.pyplot()
     
     st.subheader("SHAP Dependence Contribution Plots")
-    features = st.multiselect("Select two features", FEATURES, key="shap")
-    if len(features) > 1:
-        feat1, feat2 = features[:2]
-        fig, ax = plt.subplots(figsize=(12, 6))
-        shap.dependence_plot(feat1, shap_values, x_sample, interaction_index=feat2,
-                             ax=ax, show=False)
-        st.pyplot()
+    feat1 = st.selectbox("Select feature", FEATURES)
+    feat2 = st.selectbox("Select interacting feature", FEATURES)
+    fig, ax = plt.subplots(figsize=(12, 6))
+    shap.dependence_plot(feat1, shap_values, x_sample, interaction_index=feat2,
+                         ax=ax, show=False)
+    st.pyplot()
     
     
     st.header("Partial Dependence Plots")
