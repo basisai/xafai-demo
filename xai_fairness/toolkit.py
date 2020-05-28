@@ -125,43 +125,45 @@ def pdp_interact_plot(model,
 
 def prepare_dataset(features,
                     labels,
-                    scores=None,
-                    protected_columns=None,
-                    privileged_groups=None,
-                    unprivileged_groups=None, 
-                    favorable_label=None,
-                    unfavorable_label=None):
+                    protected_attribute,
+                    privileged_attribute_values,
+                    unprivileged_attribute_values,
+                    favorable_label=1.,
+                    unfavorable_label=0.):
     """Prepare dataset for computing fairness metrics."""
     df = features.copy()
     df['outcome'] = labels
-    
-    if scores is not None:
-        scores_names = 'scores'
-        df[scores_names] = scores
-    else:
-        scores_names = []
-
+        
     return BinaryLabelDataset(
         df=df,
         label_names=['outcome'],
-        scores_names=scores_names,
-        protected_attribute_names=protected_columns,
+        scores_names=[],
+        protected_attribute_names=[protected_attribute],
+        privileged_protected_attributes=[np.array(privileged_attribute_values)],
+        unprivileged_protected_attributes=[np.array(unprivileged_attribute_values)],
         favorable_label=favorable_label,
         unfavorable_label=unfavorable_label,
-        unprivileged_protected_attributes=unprivileged_groups,
     )
 
 
 def get_fairness(grdtruth,
                  predicted,
-                 privileged_groups=None,
-                 unprivileged_groups=None,
+                 protected_attribute,
+                 privileged_attribute_values,
+                 unprivileged_attribute_values,
                  threshold=0.2):
     """Fairness wrapper function."""
-    clf_metric = ClassificationMetric(grdtruth, predicted, unprivileged_groups, privileged_groups)
+    clf_metric = ClassificationMetric(
+        grdtruth,
+        predicted,
+        unprivileged_groups=[{protected_attribute: v} for v in unprivileged_attribute_values],
+        privileged_groups=[{protected_attribute: v} for v in privileged_attribute_values],
+    )
     fmeasures = compute_fairness_metrics(clf_metric)
+    fmeasures["Fair?"] = fmeasures["Ratio"].apply(
+        lambda x: "Yes" if np.abs(x - 1) < threshold else "No")
     
-    print(f"Fairness is when deviation < {threshold}")
+    print(f"Fairness is when deviation from 1 is less than {threshold}")
     display(fmeasures.iloc[:3].style.applymap(color_red, subset=["Fair?"]))
     
     fig_confmats = plot_confusion_matrix_by_group(clf_metric)

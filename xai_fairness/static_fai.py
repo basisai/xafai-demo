@@ -1,4 +1,8 @@
+"""
+Helpers for fairness
+"""
 import numpy as np
+import pandas as pd
 import altair as alt
 import streamlit as st
 from aif360.metrics.classification_metric import ClassificationMetric
@@ -7,19 +11,52 @@ from .toolkit import (
     prepare_dataset,
     compute_fairness_metrics,
     get_perf_measure_by_group,
-    plot_confusion_matrix_by_group,
+    color_red,
 )
 
 
-@st.cache(allow_output_mutation=True)
-def get_fmeasures(x_val, y_val, y_pred, bias_info, privileged_info, fthresh, fairness_metrics):
-    grdtruth_val = prepare_dataset(x_val, y_val, **bias_info, **privileged_info)
-    predicted_val = prepare_dataset(x_val, y_pred, **bias_info, **privileged_info)
-
-    model_metric = ClassificationMetric(grdtruth_val, predicted_val, **privileged_info)
+def get_fmeasures(x_val,
+                  y_val,
+                  y_pred,
+                  protected_attribute,
+                  privileged_attribute_values,
+                  unprivileged_attribute_values,
+                  favorable_label=1.,
+                  unfavorable_label=0.,
+                  fthresh=0.2,
+                  fairness_metrics=None):
+    grdtruth = prepare_dataset(
+        x_val,
+        y_val,
+        protected_attribute,
+        privileged_attribute_values,
+        unprivileged_attribute_values,
+        favorable_label=favorable_label,
+        unfavorable_label=unfavorable_label,
+    )
+    
+    predicted = prepare_dataset(
+        x_val,
+        y_pred,
+        protected_attribute,
+        privileged_attribute_values,
+        unprivileged_attribute_values,
+        favorable_label=favorable_label,
+        unfavorable_label=unfavorable_label,
+    )
+    
+    model_metric = ClassificationMetric(
+        grdtruth,
+        predicted,
+        unprivileged_groups=[{protected_attribute: v} for v in unprivileged_attribute_values],
+        privileged_groups=[{protected_attribute: v} for v in privileged_attribute_values],
+    )
+    
     fmeasures = compute_fairness_metrics(model_metric)
-    fmeasures = fmeasures[fmeasures["Metric"].isin(fairness_metrics)]
-    fmeasures["Fair?"] = fmeasures["Ratio"].apply(lambda x: "Yes" if np.abs(x - 1) < fthresh else "No")
+    if fairness_metrics is not None:
+        fmeasures = fmeasures[fmeasures["Metric"].isin(fairness_metrics)]
+    fmeasures["Fair?"] = fmeasures["Ratio"].apply(
+        lambda x: "Yes" if np.abs(x - 1) < fthresh else "No")
     return fmeasures, model_metric
 
 
@@ -70,7 +107,7 @@ def plot_fmeasures_bar(df0, threshold, mode=None):
         )
     else:
         bar = base.mark_bar().encode(
-            alt.X("Ratio:Q", scale=alt.Scale(domain=[0., 2.])),
+            alt.X("Ratio:Q"),
             color=alt.condition(f"abs(datum.Ratio - 1) > {threshold}",
                                 alt.value("#FF0D57"), alt.value("#1E88E5")),
             y="Metric:O",
@@ -87,12 +124,37 @@ def plot_fmeasures_bar(df0, threshold, mode=None):
     return bar + rule1 + rule2
 
 
-def color_red(x):
-    return "color: red" if x == "No" else "color: black"
+def get_confusion_matrix_chart(cm, title):
+    source = pd.DataFrame([[0, 0, cm['TN']],
+                           [0, 1, cm['FP']],
+                           [1, 0, cm['FN']],
+                           [1, 1, cm['TP']],
+                           ], columns=["actual values", "predicted values", "count"])
+
+    base = alt.Chart(source).encode(
+        y='actual values:O',
+        x='predicted values:O',
+    ).properties(
+        width=200,
+        height=200,
+        title=title,
+    )
+    rects = base.mark_rect().encode(
+        color='count:Q',
+    )
+    text = base.mark_text(
+        align='center',
+        baseline='middle',
+        color='black',
+        size=12,
+        dx=0,
+    ).encode(
+        text='count:Q',
+    )
+    return rects + text
 
 
 def alg_fai(fmeasures, model_metric, fthresh):
-    st.subheader("Fairness Metrics")
     st.write(f"Fairness is when **ratio is between {1-fthresh:.2f} and {1+fthresh:.2f}**.")
     
     chart = plot_fmeasures_bar(fmeasures, fthresh)
@@ -103,7 +165,7 @@ def alg_fai(fmeasures, model_metric, fthresh):
         .style.applymap(color_red, subset=["Fair?"])
     )
     
-    st.subheader("Performance Metrics")
+    st.write("**Performance Metrics**")
     all_perfs = []
     for metric_name in [
             'TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC',
@@ -120,5 +182,12 @@ def alg_fai(fmeasures, model_metric, fthresh):
     all_charts = alt.concat(*all_perfs, columns=1)
     st.altair_chart(all_charts, use_container_width=False)
     
-    st.subheader("Confusion Matrices")
-    st.pyplot(plot_confusion_matrix_by_group(model_metric), figsize=(8, 6))
+    st.write("**Confusion Matrices**")
+    cm1 = model_metric.binary_confusion_matrix(privileged=None)
+    c1 = get_confusion_matrix_chart(cm1, "All")
+    st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
+    cm2 = model_metric.binary_confusion_matrix(privileged=True)
+    c2 = get_confusion_matrix_chart(cm2, "Privileged")
+    cm3 = model_metric.binary_confusion_matrix(privileged=False)
+    c3 = get_confusion_matrix_chart(cm3, "Unprivileged")
+    st.altair_chart(c2 | c3, use_container_width=False)

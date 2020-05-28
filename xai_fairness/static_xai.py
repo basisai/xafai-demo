@@ -1,3 +1,6 @@
+"""
+Helpers for XAI
+"""
 import numpy as np
 import pandas as pd
 import shap
@@ -77,28 +80,29 @@ def pdp_heatmap(pdp_interact_out, feature_names):
     return chart
 
 
-@st.cache
-def compute_corrcoef(x_sample, y_prob, shap_values, max_display):
+def get_top_features(shap_values, features, max_display):
     output_df = pd.DataFrame({
-        "feature": x_sample.columns,
-        "value": np.abs(shap_values).mean(axis=0),
+        "feature": features,
+        "value": np.abs(shap_values).mean(axis=0).mean(axis=0),
     })
     output_df.sort_values("value", ascending=False, inplace=True, ignore_index=True)
-    output_df = output_df.iloc[:max_display]
-    
+    return output_df.iloc[:max_display]
+
+
+def compute_corrcoef(df, x_sample, pred_sample):
+    output_df = df.copy()
     corrcoef = []
     for col in output_df["feature"].values:
-        df_ = pd.DataFrame({"x": x_sample[col], "y": y_prob})
+        df_ = pd.DataFrame({"x": x_sample[col], "y": pred_sample})
         corrcoef.append(df_.corr(method='pearson').values[0, 1])
     output_df["corrcoef"] = corrcoef
-    
     return output_df
 
 
-def xai_summary(shap_df, x_sample, shap_values, feature_names, max_display):
-    st.subheader("SHAP Summary Plots of Top Features")
-    
-    chart = alt.Chart(shap_df).mark_bar().encode(
+def xai_summary(corr_df, x_sample, shap_values, feature_names, max_display):
+    st.write("**SHAP Summary Plots of Top Features**")
+
+    chart = alt.Chart(corr_df).mark_bar().encode(
         x=alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
         y=alt.Y("feature", title="", sort="-x"),
         color=alt.condition(
@@ -109,25 +113,22 @@ def xai_summary(shap_df, x_sample, shap_values, feature_names, max_display):
         tooltip=["feature", "value"],
     )
     st.altair_chart(chart, use_container_width=True)
-    st.write("Note: Red - positive Pearson correlation between the feature and model output; "
-             "Blue - negative correlation.")
-    
-#     shap.summary_plot(shap_values, plot_type="bar", feature_names=feature_names,
-#                       max_display=max_display, plot_size=[12, 6], show=False)
-#     plt.gcf().tight_layout()
-#     st.pyplot()
-    
-    shap.summary_plot(shap_values, x_sample, feature_names=feature_names,
-                      max_display=max_display, plot_size=[12, 6], show=False)
+    st.write("Note:\n"
+             "- Red: positive Pearson correlation between the feature and model output;\n"
+             "- Blue: negative correlation.")
+
+    shap.summary_plot(shap_values,
+                      x_sample,
+                      feature_names=feature_names,
+                      max_display=max_display,
+                      plot_size=[12, 6],
+                      show=False)
     plt.gcf().tight_layout()
     st.pyplot()
     
-    feats_ = shap_df["feature"].values[:5]
-    st.write("The top 5 features are `" + "`, `".join(feats_) + "`.")
     
-    
-def model_xai(model, x_sample, top_features, feature_names, category_map):
-    st.subheader("Partial Dependence Plots of Top Features")
+def model_xai(model, x_sample, top_features, feature_names, category_map, target_names=None):
+    st.write("**Partial Dependence Plots of Top Features**")
     # PDPbox does not allow NaNs
     _x_sample = x_sample.fillna(0)
     rev_category_map = {e: k for k, v in category_map.items() for e in v}
@@ -145,8 +146,13 @@ def model_xai(model, x_sample, top_features, feature_names, category_map):
         if not isinstance(pdp_isolate_out, list):
             pdp_isolate_out = [pdp_isolate_out]
         
-        for pdp_out in pdp_isolate_out:
-            st.altair_chart(pdp_chart(pdp_out, feature_name), use_container_width=True)
+        for i, pdp_out in enumerate(pdp_isolate_out):
+            chart = pdp_chart(pdp_out, feature_name)
+            if target_names is not None:
+                chart = chart.properties(title=f"Target Class {target_names[i]}")
+            elif len(pdp_isolate_out) > 1:
+                chart = chart.properties(title=f"Target Class {i}")
+            st.altair_chart(chart, use_container_width=True)
 
 
 def make_source_waterfall(instance, base_value, shap_values, max_display=10):
@@ -189,7 +195,7 @@ def make_source_waterfall(instance, base_value, shap_values, max_display=10):
 def waterfall_chart(source):
     chart = alt.Chart(source).mark_bar().encode(
         alt.X("feature:O", sort=source["feature"].tolist()),
-        alt.Y("open:Q", scale=alt.Scale(zero=False)),
+        alt.Y("open:Q", title="", scale=alt.Scale(zero=False)),
         alt.Y2("close:Q"),
         color=alt.condition(
             "datum.open <= datum.close",
@@ -208,6 +214,9 @@ def waterfall_chart(source):
     return chart + chart2
 
 
-def indiv_xai(instance, base_value, shap_values, max_display=20):
+def indiv_xai(instance, base_value, shap_values, title=None, max_display=20):
     source = make_source_waterfall(instance, base_value, shap_values, max_display=max_display)
-    st.altair_chart(waterfall_chart(source), use_container_width=True)
+    chart = waterfall_chart(source)
+    if title is not None:
+        chart = chart.properties(title=title)
+    st.altair_chart(chart, use_container_width=True)
