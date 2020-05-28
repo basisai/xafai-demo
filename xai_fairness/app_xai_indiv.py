@@ -3,8 +3,8 @@ import shap
 import streamlit as st
 
 from app_utils import load_model, load_data
-from constants import *
-from .xai_utils import *
+from constants import FEATURES, TARGET
+from .static_xai import make_source_waterfall, waterfall_chart
 
     
 def xai_indiv():
@@ -23,7 +23,7 @@ def xai_indiv():
     st.title("Individual Instance Explainability")
     
     clf = load_model("output/lgb.pkl")
-    sample = load_data("output/train.csv")
+    sample = load_data("output/valid.csv")
     x_sample = sample[FEATURES]
     y_sample = sample[TARGET].values
     

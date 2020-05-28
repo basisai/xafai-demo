@@ -60,7 +60,8 @@ def get_fmeasures(x_val,
     return fmeasures, model_metric
 
 
-def plot_hist(source):
+def plot_hist(source, cutoff):
+    source["Cutoff"] = cutoff
     var = source.columns[0]
     base = alt.Chart(source)
     chart = base.mark_area(
@@ -70,12 +71,16 @@ def plot_hist(source):
         alt.Y("count()", stack=None),
         alt.Color(f"{var}:N"),
     )
+    rule = base.mark_rule(color="red").encode(
+        alt.X("Cutoff:Q"),
+        size=alt.value(2),
+    )
     mean = base.mark_rule().encode(
         alt.X("mean(Prediction):Q"),
         alt.Color(f"{var}:N"),
         size=alt.value(2),
     )
-    return chart + mean
+    return chart + rule + mean
 
 
 def plot_fmeasures_bar(df0, threshold, mode=None):

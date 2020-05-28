@@ -2,11 +2,12 @@ import numpy as np
 import pandas as pd
 import shap
 import streamlit as st
+import altair as alt
 import matplotlib.pyplot as plt
 
 from app_utils import load_model, load_data, compute_shap_values
 from constants import *
-from .static_xai import compute_pdp_isolate, pdp_chart, compute_pdp_interact, pdp_heatmap, xai_summary
+from .static_xai import get_top_features, compute_pdp_isolate, pdp_chart, compute_pdp_interact, pdp_heatmap
 
 
 def xai():
@@ -35,7 +36,7 @@ def xai():
     
     # Load model, sample data
     clf = load_model("output/lgb.pkl")
-    sample = load_data("output/train.csv", sample_size=3000)
+    sample = load_data("output/valid.csv", sample_size=3000)
     x_sample = sample[FEATURES]
     
     st.header("SHAP")
@@ -54,8 +55,25 @@ def xai():
     shap_values = compute_shap_values(clf, x_sample)
     
     # summarize the effects of all features
-    max_display = st.slider("Select number of top features to show", 15, min(30, len(FEATURES)))
-    xai_summary(x_sample, shap_values, max_display)
+    max_display = 15
+    st.write("**SHAP Summary Plots of Top Features**")
+
+    source = get_top_features([shap_values], FEATURES, max_display)
+    chart = alt.Chart(source).mark_bar().encode(
+        x=alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
+        y=alt.Y("feature", title="", sort="-x"),
+        tooltip=["feature", "value"],
+    )
+    st.altair_chart(chart, use_container_width=True)
+
+    shap.summary_plot(shap_values,
+                      x_sample,
+                      feature_names=FEATURES,
+                      max_display=max_display,
+                      plot_size=[12, 6],
+                      show=False)
+    plt.gcf().tight_layout()
+    st.pyplot()
     
     st.subheader("SHAP Dependence Contribution Plots")
     features = st.multiselect("Select two features", FEATURES, key="shap")
@@ -75,7 +93,7 @@ def xai():
     feature_name = st.selectbox("Select feature", NUMERIC_FEATS + CATEGORICAL_FEATS)
     
     feature = CATEGORY_MAP.get(feature_name) or feature_name
-    pdp_isolate_out = compute_pdp_isolate(clf, _x_sample, feature)
+    pdp_isolate_out = compute_pdp_isolate(clf, _x_sample, FEATURES, feature)
     st.altair_chart(pdp_chart(pdp_isolate_out, feature_name), use_container_width=True)
     
     st.subheader("Partial Dependence Interaction Plots")
@@ -84,7 +102,7 @@ def xai():
         feature_name1, feature_name2 = feature_names[:2]
         feature1 = CATEGORY_MAP.get(feature_name1) or feature_name1
         feature2 = CATEGORY_MAP.get(feature_name2) or feature_name2
-        pdp_interact_out = compute_pdp_interact(clf, _x_sample, [feature1, feature2])
+        pdp_interact_out = compute_pdp_interact(clf, _x_sample, FEATURES, [feature1, feature2])
         st.altair_chart(pdp_heatmap(pdp_interact_out, feature_names[:2]), use_container_width=True)
 
 
