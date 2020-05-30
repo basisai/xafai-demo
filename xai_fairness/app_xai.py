@@ -1,5 +1,3 @@
-import numpy as np
-import pandas as pd
 import shap
 import streamlit as st
 import altair as alt
@@ -7,22 +5,11 @@ import matplotlib.pyplot as plt
 
 from app_utils import load_model, load_data, compute_shap_values
 from constants import *
-from .static_xai import get_top_features, compute_pdp_isolate, pdp_chart, compute_pdp_interact, pdp_heatmap
+from .static_xai import (get_top_features, compute_pdp_isolate, pdp_chart,
+                         compute_pdp_interact, pdp_heatmap)
 
 
 def xai():
-    max_width = 1000  # st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
-    st.markdown(
-        f"""
-        <style>
-        .reportview-container .main .block-container{{
-            max-width: {max_width}px;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    
     st.title("Explainability AI Dashboard")
 
     st.sidebar.title("Model and Data Instructions")
@@ -60,9 +47,9 @@ def xai():
 
     source = get_top_features([shap_values], FEATURES, max_display)
     chart = alt.Chart(source).mark_bar().encode(
-        x=alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
-        y=alt.Y("feature", title="", sort="-x"),
-        tooltip=["feature", "value"],
+        alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
+        alt.Y("feature", title="", sort="-x"),
+        alt.Tooltip(["feature", "value"]),
     )
     st.altair_chart(chart, use_container_width=True)
 
@@ -82,8 +69,7 @@ def xai():
     shap.dependence_plot(feat1, shap_values, x_sample, interaction_index=feat2,
                          ax=ax, show=False)
     st.pyplot()
-    
-    
+
     st.header("Partial Dependence Plots")
     # PDPbox does not allow NaNs
     _x_sample = x_sample.fillna(0)
@@ -96,13 +82,14 @@ def xai():
     st.altair_chart(pdp_chart(pdp_isolate_out, feature_name), use_container_width=True)
     
     st.subheader("Partial Dependence Interaction Plots")
-    feature_names = st.multiselect("Select two features", NUMERIC_FEATS + CATEGORICAL_FEATS, key="pdp")
-    if len(feature_names) > 1:
-        feature_name1, feature_name2 = feature_names[:2]
-        feature1 = CATEGORY_MAP.get(feature_name1) or feature_name1
-        feature2 = CATEGORY_MAP.get(feature_name2) or feature_name2
+    select_feats = st.multiselect("Select two features", NUMERIC_FEATS + CATEGORICAL_FEATS)
+    if len(select_feats) > 1:
+        feat1, feat2 = select_feats[:2]
+        feature1 = CATEGORY_MAP.get(feat1) or feat1
+        feature2 = CATEGORY_MAP.get(feat2) or feat2
         pdp_interact_out = compute_pdp_interact(clf, _x_sample, FEATURES, [feature1, feature2])
-        st.altair_chart(pdp_heatmap(pdp_interact_out, feature_names[:2]), use_container_width=True)
+        st.altair_chart(pdp_heatmap(pdp_interact_out, select_feats[:2]),
+                        use_container_width=True)
 
 
 if __name__ == "__main__":

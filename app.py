@@ -6,6 +6,18 @@ from xai_fairness.app_xai_indiv import xai_indiv
 
 
 def main():
+    max_width = 1000  # st.sidebar.slider("Set page width", min_value=700, max_value=1500, value=1000, step=20)
+    st.markdown(
+        f"""
+        <style>
+        .reportview-container .main .block-container{{
+            max-width: {max_width}px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     select = st.sidebar.selectbox(
         "Select dashboard", ["Global explainability", "Fairness", "Individual explainability"])
     

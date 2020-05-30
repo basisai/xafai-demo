@@ -1,12 +1,10 @@
 import pandas as pd
-import altair as alt
 import streamlit as st
 from sklearn import metrics
 
 from app_utils import load_model, load_data, predict
 from constants import FEATURES, TARGET, CONFIG_FAI
-from .static_fai import get_fmeasures, plot_hist, plot_fmeasures_bar, color_red, alg_fai
-from .toolkit import prepare_dataset, get_perf_measure_by_group
+from .static_fai import get_fmeasures, plot_hist, alg_fai
 
 
 def print_model_perf(y_val, y_pred):
@@ -19,18 +17,6 @@ def print_model_perf(y_val, y_pred):
 
 
 def fai():
-    max_width = 1000
-    st.markdown(
-        f"""
-        <style>
-        .reportview-container .main .block-container{{
-            max-width: {max_width}px;
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    
     st.title("Fairness AI Dashboard")
     
     st.sidebar.title("Instructions")
