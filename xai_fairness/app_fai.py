@@ -30,7 +30,7 @@ def fai():
 
     # Load sample, data
     clf = load_model("output/lgb.pkl")
-    valid = load_data("output/valid.csv").fillna(0)  # Fairness does not allow NaNs
+    valid = load_data("output/valid.csv")  # Fairness does not allow NaNs
     x_valid = valid[FEATURES]
     y_valid = valid[TARGET].values
 
