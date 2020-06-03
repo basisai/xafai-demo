@@ -61,7 +61,7 @@ def xai():
                       show=False)
     plt.gcf().tight_layout()
     st.pyplot()
-    
+
     st.subheader("SHAP Dependence Contribution Plots")
     feat1 = st.selectbox("Select feature", FEATURES)
     feat2 = st.selectbox("Select interacting feature", FEATURES)
@@ -73,14 +73,14 @@ def xai():
     st.header("Partial Dependence Plots")
     # PDPbox does not allow NaNs
     _x_sample = x_sample.fillna(0)
-    
+
     st.subheader("Partial Dependence Plots")
     feature_name = st.selectbox("Select feature", NUMERIC_FEATS + CATEGORICAL_FEATS)
-    
+
     feature = CATEGORY_MAP.get(feature_name) or feature_name
     pdp_isolate_out = compute_pdp_isolate(clf, _x_sample, FEATURES, feature)
     st.altair_chart(pdp_chart(pdp_isolate_out, feature_name), use_container_width=True)
-    
+
     st.subheader("Partial Dependence Interaction Plots")
     select_feats = st.multiselect("Select two features", NUMERIC_FEATS + CATEGORICAL_FEATS)
     if len(select_feats) > 1:
