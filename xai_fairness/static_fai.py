@@ -156,9 +156,6 @@ def get_confusion_matrix_chart(cm, title):
 
 
 def alg_fai(fmeasures, aif_metric, threshold):
-    fmeasures["Fair?"] = fmeasures["Ratio"].apply(
-        lambda x: "Yes" if np.abs(x - 1) < threshold else "No")
-
     st.write(f"Fairness is when **ratio is between {1-threshold:.2f} and {1+threshold:.2f}**.")
 
     chart = plot_fmeasures_bar(fmeasures, threshold)

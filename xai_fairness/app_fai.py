@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import streamlit as st
 from sklearn import metrics
@@ -63,7 +64,8 @@ def fai():
         privi_info["unprivileged_attribute_values"],
     )
     fmeasures = compute_fairness_measures(aif_metric)
-    st.write(fmeasures)
+    fmeasures["Fair?"] = fmeasures["Ratio"].apply(
+        lambda x: "Yes" if np.abs(x - 1) < fthresh else "No")
     alg_fai(fmeasures, aif_metric, fthresh)
 
     st.subheader("Notes")
