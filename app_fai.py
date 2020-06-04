@@ -5,7 +5,12 @@ from sklearn import metrics
 
 from app_utils import load_model, load_data, predict
 from constants import FEATURES, TARGET, CONFIG_FAI
-from .static_fai import get_aif_metric, compute_fairness_measures, plot_hist, alg_fai
+from xai_fairness.static_fai import (
+    get_aif_metric,
+    compute_fairness_measures,
+    plot_hist,
+    alg_fai,
+)
 
 
 def print_model_perf(y_val, y_pred):
@@ -22,14 +27,10 @@ def print_model_perf(y_val, y_pred):
 def fai():
     st.title("Fairness AI Dashboard")
 
-    st.sidebar.title("Instructions")
-    st.sidebar.info("- See `Global explainability` page for instructions on model and data.\n"
-                    "- Also set `CONFIG_FAI` in `constants.py`.")
-
     protected_attribute = st.selectbox("Select protected column.", list(CONFIG_FAI.keys()))
 
     # Load sample, data
-    clf = load_model("output/lgb.pkl")
+    clf = load_model("output/lgb_clf.pkl")
     valid = load_data("output/valid.csv")  # Fairness does not allow NaNs
     x_valid = valid[FEATURES]
     y_valid = valid[TARGET].values

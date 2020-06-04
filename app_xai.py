@@ -5,39 +5,23 @@ import matplotlib.pyplot as plt
 
 from app_utils import load_model, load_data, compute_shap_values
 from constants import *
-from .static_xai import (get_top_features, compute_pdp_isolate, pdp_chart,
-                         compute_pdp_interact, pdp_heatmap)
+from xai_fairness.static_xai import (
+    get_top_features,
+    compute_pdp_isolate,
+    pdp_chart,
+    pdp_heatmap,
+)
 
 
 def xai():
     st.title("Explainability AI Dashboard")
-
-    st.sidebar.title("Model and Data Instructions")
-    st.sidebar.info(
-        "- Write your own `load_model`, `load_data` functions.\n"
-        "- Model must be a fitted `sklearn` model.\n"
-        "- Sample data must be a `pandas.DataFrame`.\n"
-        "- Feature names and a category map for one-hot encoded features must be "
-        "furnished in `constants.py`."
-    )
     
     # Load model, sample data
-    clf = load_model("output/lgb.pkl")
+    clf = load_model("output/lgb_clf.pkl")
     sample = load_data("output/valid.csv", sample_size=3000)
     x_sample = sample[FEATURES]
     
     st.header("SHAP")
-    st.sidebar.title("SHAP Instructions")
-    st.sidebar.info(
-        "Set the relevant explainer in `compute_shap_values` for your model.\n"
-        "- `shap.TreeExplainer` works with tree models.\n"
-        "- `shap.DeepExplainer` works with Deep Learning models.\n"
-        "- `shap.KernelExplainer` works with all models, though it is slower than "
-        "other Explainers and it offers an approximation rather than exact "
-        "Shap values.\n\n"
-        "See [Explainers](https://shap.readthedocs.io/en/latest/#explainers) for more details."
-    )
-    
     # Compute SHAP values
     shap_values = compute_shap_values(clf, x_sample)
     

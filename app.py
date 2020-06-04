@@ -1,8 +1,8 @@
 import streamlit as st
 
-from xai_fairness.app_xai import xai
-from xai_fairness.app_fai import fai
-from xai_fairness.app_xai_indiv import xai_indiv
+from app_xai import xai
+from app_fai import fai
+from app_xai_indiv import xai_indiv
 
 
 def main():
