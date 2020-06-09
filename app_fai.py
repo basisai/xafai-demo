@@ -30,8 +30,8 @@ def fai():
     protected_attribute = st.selectbox("Select protected column.", list(CONFIG_FAI.keys()))
 
     # Load sample, data
-    clf = load_model("output/lgb_clf.pkl")
-    valid = load_data("output/valid.csv")  # Fairness does not allow NaNs
+    clf = load_model("data/lgb_clf.pkl")
+    valid = load_data("data/valid.csv")  # Fairness does not allow NaNs
     x_valid = valid[FEATURES]
     y_valid = valid[TARGET].values
 

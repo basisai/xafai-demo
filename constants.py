@@ -1,7 +1,5 @@
 import json
 
-# For explainability AI app
-
 # List raw numeric and categorical features
 NUMERIC_FEATS = [
     'Age',
@@ -22,7 +20,7 @@ CATEGORICAL_FEATS = [
 ]
 
 # For each categorical feature, get the one-hot encoded feature names
-CATEGORY_MAP = json.load(open("input/category_map.txt"))
+CATEGORY_MAP = json.load(open("data/category_map.txt"))
 
 OHE_CAT_FEATS = []
 for f in CATEGORICAL_FEATS:
@@ -33,9 +31,7 @@ FEATURES = OHE_CAT_FEATS + NUMERIC_FEATS
 TARGET = "Target"
 TARGET_NAMES = ['<=50K', '>50K']
 
-
-# For fairness AI app
-# List bias and privileged info
+# List privileged info
 CONFIG_FAI = {
     'Sex=Male': {
         'privileged_attribute_values': [1],

@@ -20,8 +20,8 @@ def xai():
     st.title("Explainability AI Dashboard")
     
     # Load model, valid data
-    clf = load_model("output/lgb_clf.pkl")
-    valid = load_data("output/valid.csv", sample_size=3000)
+    clf = load_model("data/lgb_clf.pkl")
+    valid = load_data("data/valid.csv", sample_size=3000)
     x_valid = valid[FEATURES]
     
     st.header("SHAP")
