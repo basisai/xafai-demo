@@ -9,7 +9,7 @@ from xai_fairness.static_xai import make_source_waterfall, waterfall_chart
 def xai_indiv():
     st.title("Individual Instance Explainability")
     
-    clf = load_model("data/lgb_clf.pkl")
+    clf = load_model("models/lgb_clf.pkl")
     sample = load_data("data/valid.csv")
     x_sample = sample[FEATURES]
     y_sample = sample[TARGET].values
