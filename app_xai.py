@@ -3,10 +3,11 @@ import streamlit as st
 import altair as alt
 import matplotlib.pyplot as plt
 
-from app_utils import load_model, load_data, compute_shap_values
+from app_utils import load_model, load_data, predict, compute_shap_values
 from constants import *
 from xai_fairness.static_xai import (
     get_top_features,
+    compute_corrcoef,
     make_source_dp,
     dependence_chart,
     compute_pdp_isolate,
@@ -23,6 +24,7 @@ def xai():
     clf = load_model("models/lgb_clf.pkl")
     valid = load_data("data/valid.csv", sample_size=3000)
     x_valid = valid[FEATURES]
+    y_score = predict(clf, x_valid)
     
     st.header("SHAP")
     # Compute SHAP values
@@ -32,13 +34,25 @@ def xai():
     max_display = 15
     st.write("**SHAP Summary Plots of Top Features**")
 
-    source = get_top_features([shap_values], FEATURES, max_display)
+    output_df = get_top_features([shap_values], FEATURES, max_display)
+    source = compute_corrcoef(output_df, x_valid, y_score)
+    source["corr"] = source["corrcoef"].apply(lambda x: "positive" if x > 0 else "negative")
     chart = alt.Chart(source).mark_bar().encode(
-        alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
-        alt.Y("feature", title="", sort="-x"),
+        alt.X("value:Q", title="mean(|SHAP value|) (average impact on model output magnitude)"),
+        alt.Y("feature:N", title="", sort="-x"),
+        alt.Color("corr:N", scale=alt.Scale(
+            domain=["positive", "negative"], range=["#FF0D57", "#1E88E5"])),
         alt.Tooltip(["feature", "value"]),
     )
     st.altair_chart(chart, use_container_width=True)
+
+    # source = get_top_features([shap_values], FEATURES, max_display)
+    # chart = alt.Chart(source).mark_bar().encode(
+    #     alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
+    #     alt.Y("feature", title="", sort="-x"),
+    #     alt.Tooltip(["feature", "value"]),
+    # )
+    # st.altair_chart(chart, use_container_width=True)
 
     shap.summary_plot(shap_values,
                       x_valid,
