@@ -6,6 +6,7 @@ from sklearn import metrics
 from app_utils import load_model, load_data, predict
 from constants import FEATURES, TARGET, TARGET_CLASSES, CONFIG_FAI
 from xai_fairness.static_fai import (
+    binarize,
     get_aif_metric,
     compute_fairness_measures,
     plot_hist,
@@ -22,10 +23,6 @@ def print_model_perf(y_val, y_pred):
         metrics.recall_score(y_val, y_pred, average="weighted"))
     text += metrics.classification_report(y_val, y_pred, digits=4)
     return text
-
-
-def binarize(y, select):
-    return (np.array(y) == select).astype(int)
 
 
 def fai(version=1):

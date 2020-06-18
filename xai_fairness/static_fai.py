@@ -14,6 +14,11 @@ from .toolkit import (
 )
 
 
+def binarize(y, label):
+    """Binarize array-like data according to label."""
+    return (np.array(y) == label).astype(int)
+
+
 def plot_hist(source, cutoff):
     """Plot custom histogram."""
     source["Cutoff"] = cutoff
