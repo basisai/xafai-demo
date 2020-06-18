@@ -97,7 +97,7 @@ def pdp_heatmap(pdp_interact_out, feature_names):
 def get_top_features(shap_values, features, max_display):
     output_df = pd.DataFrame({
         "feature": features,
-        "value": np.abs(shap_values).mean(axis=0).mean(axis=0),
+        "value": np.abs(shap_values).mean(axis=0),
     })
     output_df.sort_values("value", ascending=False, inplace=True, ignore_index=True)
     return output_df.iloc[:max_display]
@@ -277,7 +277,7 @@ def waterfall_chart(source, decimal=3):
 
     bars = alt.Chart(source).mark_bar().encode(
         alt.X("feature:O", sort=source["feature"].tolist()),
-        alt.Y("open:Q", scale=alt.Scale(zero=False)),
+        alt.Y("open:Q", scale=alt.Scale(zero=False), title=""),
         alt.Y2("close:Q"),
         alt.Tooltip(["feature", "feature_value", "shap_value"]),
     )

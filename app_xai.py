@@ -4,7 +4,7 @@ import altair as alt
 import matplotlib.pyplot as plt
 
 from app_utils import load_model, load_data, predict, compute_shap_values
-from constants import *
+from constants import FEATURES, TARGET_CLASSES, NUMERIC_FEATS, CATEGORICAL_FEATS, CATEGORY_MAP
 from xai_fairness.static_xai import (
     get_top_features,
     compute_corrcoef,
@@ -16,26 +16,30 @@ from xai_fairness.static_xai import (
     pdp_heatmap,
 )
 
+MAX_DISPLAY = 15
+
 
 def xai():
     st.title("Explainability AI Dashboard")
-    
+
     # Load model, valid data
     clf = load_model("models/lgb_clf.pkl")
     valid = load_data("data/valid.csv", sample_size=3000)
     x_valid = valid[FEATURES]
     y_score = predict(clf, x_valid)
-    
-    st.header("SHAP")
+
     # Compute SHAP values
-    shap_values = compute_shap_values(clf, x_valid)
-    
+    all_shap_values = compute_shap_values(clf, x_valid)
+
+    select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
+    idx = TARGET_CLASSES.index(select_class)
+
+    st.header("SHAP")
     # summarize the effects of all features
-    max_display = 15
     st.write("**SHAP Summary Plots of Top Features**")
 
-    output_df = get_top_features([shap_values], FEATURES, max_display)
-    source = compute_corrcoef(output_df, x_valid, y_score)
+    output_df = get_top_features(all_shap_values[idx], FEATURES, MAX_DISPLAY)
+    source = compute_corrcoef(output_df, x_valid, y_score[:, idx])
     source["corr"] = source["corrcoef"].apply(lambda x: "positive" if x > 0 else "negative")
     chart = alt.Chart(source).mark_bar().encode(
         alt.X("value:Q", title="mean(|SHAP value|) (average impact on model output magnitude)"),
@@ -44,20 +48,17 @@ def xai():
             domain=["positive", "negative"], range=["#FF0D57", "#1E88E5"])),
         alt.Tooltip(["feature", "value"]),
     )
-    st.altair_chart(chart, use_container_width=True)
-
-    # source = get_top_features([shap_values], FEATURES, max_display)
     # chart = alt.Chart(source).mark_bar().encode(
     #     alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
     #     alt.Y("feature", title="", sort="-x"),
     #     alt.Tooltip(["feature", "value"]),
     # )
-    # st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
 
-    shap.summary_plot(shap_values,
+    shap.summary_plot(all_shap_values[idx],
                       x_valid,
                       feature_names=FEATURES,
-                      max_display=max_display,
+                      max_display=MAX_DISPLAY,
                       plot_size=[12, 6],
                       show=False)
     plt.gcf().tight_layout()
@@ -65,7 +66,7 @@ def xai():
 
     st.subheader("SHAP Dependence Contribution Plot")
     shap_feat = st.selectbox("Select feature", FEATURES[-4:] + FEATURES[:-4])
-    source = make_source_dp(shap_values, x_valid.values, FEATURES, shap_feat)
+    source = make_source_dp(all_shap_values[idx], x_valid.values, FEATURES, shap_feat)
     st.altair_chart(dependence_chart(source, shap_feat), use_container_width=False)
 
     st.subheader("SHAP Dependence Contribution Interaction Plot")
@@ -73,9 +74,12 @@ def xai():
     if len(shap_feats) > 1:
         shap_feat1, shap_feat2 = shap_feats[:2]
         fig, ax = plt.subplots(figsize=(12, 6))
-        shap.dependence_plot(shap_feat1, shap_values, x_valid,
+        shap.dependence_plot(shap_feat1,
+                             all_shap_values[idx],
+                             x_valid,
                              interaction_index=shap_feat2,
-                             ax=ax, show=False)
+                             ax=ax,
+                             show=False)
         st.pyplot()
 
     st.header("Partial Dependence Plot")

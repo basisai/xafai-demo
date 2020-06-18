@@ -24,11 +24,11 @@ def predict(clf, x):
     For classification, predict probabilities.
     For regression, predict scores.
     """
-    return clf.predict_proba(x)[:, 1]
+    return clf.predict_proba(x)
 
 
 @st.cache(allow_output_mutation=True)
 def compute_shap_values(clf, x):
     # Use the relevant explainer
     explainer = shap.TreeExplainer(clf)
-    return explainer.shap_values(x)[1]
+    return explainer.shap_values(x)

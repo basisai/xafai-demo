@@ -4,7 +4,7 @@ import streamlit as st
 from sklearn import metrics
 
 from app_utils import load_model, load_data, predict
-from constants import FEATURES, TARGET, CONFIG_FAI
+from constants import FEATURES, TARGET, TARGET_CLASSES, CONFIG_FAI
 from xai_fairness.static_fai import (
     get_aif_metric,
     compute_fairness_measures,
@@ -24,32 +24,54 @@ def print_model_perf(y_val, y_pred):
     return text
 
 
-def fai():
+def binarize(y, select):
+    return (np.array(y) == select).astype(int)
+
+
+def fai(version=1):
     st.title("Fairness AI Dashboard")
 
-    protected_attribute = st.selectbox("Select protected column.", list(CONFIG_FAI.keys()))
+    protected_attribute = st.selectbox("Select protected column", list(CONFIG_FAI.keys()))
 
     # Load sample, data
     clf = load_model("models/lgb_clf.pkl")
     valid = load_data("data/valid.csv")  # Fairness does not allow NaNs
-    x_valid = valid[FEATURES]
     y_valid = valid[TARGET].values
 
     # Predict on val data
-    y_prob = predict(clf, x_valid)
+    y_score = predict(clf, valid[FEATURES])
 
-    st.header("Prediction Distributions")
-    cutoff = st.slider("Set probability cutoff", 0., 1., 0.5, 0.01, key="proba")
-    y_pred = (y_prob > cutoff).astype(int)
+    if version == 1:
+        st.sidebar.info("- Applicable for both binary and multiclass.\n"
+                        "- Prediction threshold is fixed a priori.\n"
+                        "- Allows user to toggle classes.")
 
-    source = pd.DataFrame({
-        protected_attribute: x_valid[protected_attribute].values,
-        "Prediction": y_prob,
-    })
-    st.altair_chart(plot_hist(source, cutoff), use_container_width=True)
+        y_pred = (y_score[:, 1] > 0.5).astype(int)
 
-    st.header("Model Performance")
-    st.text(print_model_perf(y_valid, y_pred))
+        select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
+        true_class = binarize(y_valid, select_class)
+        pred_class = binarize(y_pred, select_class)
+    else:
+        st.sidebar.info("- Applicable for binary only.\n"
+                        "- No selection of classes.\n"
+                        "-  Allows user to toggle prediction threshold.")
+
+        st.header("Prediction Distributions")
+        y_prob = y_score[:, 1]
+        cutoff = st.slider("Set probability cutoff", 0., 1., 0.5, 0.01, key="proba")
+        y_pred = (y_prob > cutoff).astype(int)
+
+        source = pd.DataFrame({
+            protected_attribute: valid[protected_attribute].values,
+            "Prediction": y_prob,
+        })
+        st.altair_chart(plot_hist(source, cutoff), use_container_width=True)
+
+        st.header("Model Performance")
+        st.text(print_model_perf(y_valid, y_pred))
+
+        true_class = y_valid
+        pred_class = y_pred
 
     st.header("Algorithmic Fairness Metrics")    
     fthresh = st.slider("Set fairness threshold", 0., 1., 0.2, 0.05, key="fairness")
@@ -58,8 +80,8 @@ def fai():
     privi_info = CONFIG_FAI[protected_attribute]
     aif_metric = get_aif_metric(
         valid,
-        y_valid,
-        y_pred,
+        true_class,
+        pred_class,
         protected_attribute,
         privi_info["privileged_attribute_values"],
         privi_info["unprivileged_attribute_values"],

@@ -19,14 +19,17 @@ def main():
     )
 
     select = st.sidebar.selectbox(
-        "Select dashboard", ["Global explainability", "Fairness", "Individual explainability"])
+        "Select dashboard", ["Global explainability", "Individual explainability",
+                             "Fairness v1", "Fairness v2"])
     
     if select == "Global explainability":
         xai()
-    elif select == "Fairness":
-        fai()
     elif select == "Individual explainability":
         xai_indiv()
+    elif select == "Fairness v1":
+        fai(version=1)
+    elif select == "Fairness v2":
+        fai(version=2)
     
     
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ for f in CATEGORICAL_FEATS:
 # Train & validation features and target
 FEATURES = OHE_CAT_FEATS + NUMERIC_FEATS
 TARGET = "Target"
+TARGET_CLASSES = [0, 1]
 TARGET_NAMES = ['<=50K', '>50K']
 
 # List privileged info
