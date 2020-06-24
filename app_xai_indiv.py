@@ -40,7 +40,11 @@ def xai_indiv():
     base_value = explainer.expected_value[idx]
     source = make_source_waterfall(instance, base_value, shap_values, max_display=20)
     st.altair_chart(waterfall_chart(source), use_container_width=True)
-    st.write(pd.DataFrame({"feature": FEATURES, "shap_values": shap_values}))
+
+    df = instance.copy().T
+    df.columns = ["feature_value"]
+    df["shap_value"] = shap_values
+    st.write(df)
 
 
 if __name__ == "__main__":

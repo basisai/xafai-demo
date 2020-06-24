@@ -3,11 +3,11 @@ import streamlit as st
 import altair as alt
 import matplotlib.pyplot as plt
 
-from app_utils import load_model, load_data, predict, compute_shap_values
+from app_utils import load_model, load_data, compute_shap_values
 from constants import FEATURES, TARGET_CLASSES, NUMERIC_FEATS, CATEGORICAL_FEATS, CATEGORY_MAP
+from xai_fairness.toolkit import compute_corrcoef
 from xai_fairness.static_xai import (
     get_top_features,
-    compute_corrcoef,
     make_source_dp,
     dependence_chart,
     compute_pdp_isolate,
@@ -26,10 +26,10 @@ def xai():
     clf = load_model("models/lgb_clf.pkl")
     valid = load_data("data/valid.csv", sample_size=3000)
     x_valid = valid[FEATURES]
-    y_score = predict(clf, x_valid)
 
     # Compute SHAP values
     all_shap_values = compute_shap_values(clf, x_valid)
+    all_corrs = compute_corrcoef(x_valid, all_shap_values)
 
     select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
     idx = TARGET_CLASSES.index(select_class)
@@ -37,9 +37,10 @@ def xai():
     st.header("SHAP")
     # summarize the effects of all features
     st.write("**SHAP Summary Plots of Top Features**")
-
-    output_df = get_top_features(all_shap_values[idx], FEATURES, MAX_DISPLAY)
-    source = compute_corrcoef(output_df, x_valid, y_score[:, idx])
+    source = (
+        get_top_features(all_shap_values[idx], all_corrs[idx], FEATURES)
+        .iloc[:MAX_DISPLAY]
+    )
     source["corr"] = source["corrcoef"].apply(lambda x: "positive" if x > 0 else "negative")
     chart = alt.Chart(source).mark_bar().encode(
         alt.X("value:Q", title="mean(|SHAP value|) (average impact on model output magnitude)"),
@@ -48,11 +49,6 @@ def xai():
             domain=["positive", "negative"], range=["#FF0D57", "#1E88E5"])),
         alt.Tooltip(["feature", "value"]),
     )
-    # chart = alt.Chart(source).mark_bar().encode(
-    #     alt.X("value", title="mean(|SHAP value|) (average impact on model output magnitude)"),
-    #     alt.Y("feature", title="", sort="-x"),
-    #     alt.Tooltip(["feature", "value"]),
-    # )
     st.altair_chart(chart, use_container_width=True)
 
     shap.summary_plot(all_shap_values[idx],
@@ -83,8 +79,7 @@ def xai():
         st.pyplot()
 
     st.header("Partial Dependence Plot")
-    # PDPbox does not allow NaNs
-    _x_valid = x_valid.fillna(0)
+    _x_valid = x_valid.fillna(0)  # PDPbox does not allow NaNs
 
     st.subheader("Partial Dependence Plot")
     pdp_feat = st.selectbox("Select feature", NUMERIC_FEATS + CATEGORICAL_FEATS)
