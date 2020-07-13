@@ -1,13 +1,14 @@
+import numpy as np
+import pandas as pd
 import shap
 import streamlit as st
 import altair as alt
 import matplotlib.pyplot as plt
 
-from app_utils import load_model, load_data, compute_shap_values
+from app_utils import load_model, load_data, compute_shap
 from constants import FEATURES, TARGET_CLASSES, NUMERIC_FEATS, CATEGORICAL_FEATS, CATEGORY_MAP
 from xai_fairness.toolkit import compute_corrcoef
 from xai_fairness.static_xai import (
-    get_top_features,
     make_source_dp,
     dependence_chart,
     compute_pdp_isolate,
@@ -19,6 +20,16 @@ from xai_fairness.static_xai import (
 MAX_DISPLAY = 15
 
 
+def _rank_features(shap_values, corrs, feature_names):
+    shap_summary_df = pd.DataFrame({
+        "feature": feature_names,
+        "mas_value": np.abs(shap_values).mean(axis=0),
+        "corrcoef": corrs,
+    })
+    shap_summary_df = shap_summary_df.sort_values("mas_value", ascending=False, ignore_index=True)
+    return shap_summary_df
+
+
 def xai():
     st.title("Explainability AI Dashboard")
 
@@ -28,26 +39,28 @@ def xai():
     x_valid = valid[FEATURES]
 
     # Compute SHAP values
-    all_shap_values = compute_shap_values(clf, x_valid)
+    all_shap_values, _ = compute_shap(clf, x_valid)
     all_corrs = compute_corrcoef(x_valid, all_shap_values)
 
-    select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
-    idx = TARGET_CLASSES.index(select_class)
+    idx = 0
+    if TARGET_CLASSES is not None and len(TARGET_CLASSES) > 2:
+        select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
+        idx = TARGET_CLASSES.index(select_class)
 
     st.header("SHAP")
     # summarize the effects of all features
     st.write("**SHAP Summary Plots of Top Features**")
     source = (
-        get_top_features(all_shap_values[idx], all_corrs[idx], FEATURES)
+        _rank_features(all_shap_values[idx], all_corrs[idx], FEATURES)
         .iloc[:MAX_DISPLAY]
     )
     source["corr"] = source["corrcoef"].apply(lambda x: "positive" if x > 0 else "negative")
     chart = alt.Chart(source).mark_bar().encode(
-        alt.X("value:Q", title="mean(|SHAP value|) (average impact on model output magnitude)"),
+        alt.X("mas_value:Q", title="mean(|SHAP value|) (average impact on model output magnitude)"),
         alt.Y("feature:N", title="", sort="-x"),
         alt.Color("corr:N", scale=alt.Scale(
             domain=["positive", "negative"], range=["#FF0D57", "#1E88E5"])),
-        alt.Tooltip(["feature", "value"]),
+        alt.Tooltip(["feature", "mas_value"]),
     )
     st.altair_chart(chart, use_container_width=True)
 

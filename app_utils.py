@@ -1,8 +1,9 @@
 import pickle
 
 import pandas as pd
-import shap
 import streamlit as st
+
+from xai_fairness.toolkit import compute_shap_values
 
 
 @st.cache(allow_output_mutation=True)
@@ -28,7 +29,5 @@ def predict(clf, x):
 
 
 @st.cache(allow_output_mutation=True)
-def compute_shap_values(clf, x):
-    # Use the relevant explainer
-    explainer = shap.TreeExplainer(clf)
-    return explainer.shap_values(x)
+def compute_shap(clf, x):
+    return compute_shap_values(x, model=clf, model_type="tree")
