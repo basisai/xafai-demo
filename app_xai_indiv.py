@@ -26,7 +26,7 @@ def xai_indiv():
     x_sample = sample[FEATURES]
     y_sample = sample[TARGET].values
 
-    scores = predict(clf, x_sample)[:, 1]
+    scores = predict(clf, x_sample)
 
     all_shap_values, all_base_value = compute_shap(clf, x_sample)
 
@@ -64,7 +64,7 @@ def xai_indiv():
     st.write(f"**Prediction: `{scores[row_idx]:.4f}`**")
 
     # Compute SHAP values
-    st.subheader("SHAP contribution to prediction")
+    st.subheader("Feature SHAP contribution to prediction")
     shap_values = all_shap_values[idx][row_idx]
     base_value = all_base_value[idx]
     source = make_source_waterfall(instance, base_value, shap_values, max_display=20)
