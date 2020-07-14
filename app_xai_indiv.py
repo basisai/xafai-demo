@@ -52,28 +52,31 @@ def xai_indiv():
     class_idx = TARGET_CLASSES.index(select_class)
     select_samples = sample.index[(y_sample == class_idx) & (scores_bin == bin_idx)]
 
-    # Select instance
-    _row_idx = st.slider("Select instance", 0, len(select_samples), 0)
-    row_idx = select_samples[_row_idx]
-    instance = x_sample.iloc[row_idx: row_idx + 1]
+    if len(select_samples) > 0:
+        # Select instance
+        _row_idx = st.slider("Select instance", 0, len(select_samples), 0)
+        row_idx = select_samples[_row_idx]
+        instance = x_sample.iloc[row_idx: row_idx + 1]
 
-    st.write("**Feature values**")
-    st.dataframe(instance.T)
+        st.write("**Feature values**")
+        st.dataframe(instance.T)
 
-    st.write(f"**Actual label: `{y_sample[row_idx]}`**")
-    st.write(f"**Prediction: `{scores[row_idx]:.4f}`**")
+        st.write(f"**Actual label: `{y_sample[row_idx]}`**")
+        st.write(f"**Prediction: `{scores[row_idx]:.4f}`**")
 
-    # Compute SHAP values
-    st.subheader("Feature SHAP contribution to prediction")
-    shap_values = all_shap_values[idx][row_idx]
-    base_value = all_base_value[idx]
-    source = make_source_waterfall(instance, base_value, shap_values, max_display=20)
-    st.altair_chart(waterfall_chart(source), use_container_width=True)
+        # Compute SHAP values
+        st.subheader("Feature SHAP contribution to prediction")
+        shap_values = all_shap_values[idx][row_idx]
+        base_value = all_base_value[idx]
+        source = make_source_waterfall(instance, base_value, shap_values, max_display=20)
+        st.altair_chart(waterfall_chart(source), use_container_width=True)
 
-    df = instance.copy().T
-    df.columns = ["feature_value"]
-    df["shap_value"] = shap_values
-    st.write(df)
+        df = instance.copy().T
+        df.columns = ["feature_value"]
+        df["shap_value"] = shap_values
+        st.write(df)
+    else:
+        st.write("**No instances found.**")
 
 
 if __name__ == "__main__":
