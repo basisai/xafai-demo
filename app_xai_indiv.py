@@ -54,7 +54,7 @@ def xai_indiv():
 
     if len(select_samples) > 0:
         # Select instance
-        _row_idx = st.slider("Select instance", 0, len(select_samples), 0)
+        _row_idx = st.slider("Select instance", 0, len(select_samples) - 1, 0)
         row_idx = select_samples[_row_idx]
         instance = x_sample.iloc[row_idx: row_idx + 1]
 
