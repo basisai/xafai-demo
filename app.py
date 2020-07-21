@@ -18,17 +18,22 @@ def main():
         unsafe_allow_html=True,
     )
 
-    select = st.sidebar.selectbox(
-        "Select dashboard", ["Global explainability", "Individual explainability",
-                             "Fairness v1", "Fairness v2"])
+    select_ex = st.sidebar.selectbox("Select example", ["Binary classification"])
+
+    select_db = st.sidebar.selectbox("Select dashboard", [
+        "Global explainability",
+        "Individual explainability",
+        "Fairness v1",
+        "Fairness v2",
+    ])
     
-    if select == "Global explainability":
+    if select_db == "Global explainability":
         xai()
-    elif select == "Individual explainability":
+    elif select_db == "Individual explainability":
         xai_indiv()
-    elif select == "Fairness v1":
+    elif select_db == "Fairness v1":
         fai(version=1)
-    elif select == "Fairness v2":
+    elif select_db == "Fairness v2":
         fai(version=2)
     
     

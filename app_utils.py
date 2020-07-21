@@ -21,7 +21,7 @@ def load_data(filename, sample_size=None, random_state=0):
 
 @st.cache(allow_output_mutation=True)
 def predict(clf, x):
-    return clf.predict_proba(x)[:, 1]
+    return clf.predict_proba(x)
 
 
 @st.cache(allow_output_mutation=True)

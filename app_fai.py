@@ -32,8 +32,9 @@ def fai(version=1):
 
     # Load sample, data
     clf = load_model("models/lgb_clf.pkl")
-    valid = load_data("data/valid.csv")  # Fairness does not allow NaNs
+    valid = load_data("data/valid.csv")
     y_valid = valid[TARGET].values
+    valid_fai = valid[list(CONFIG_FAI.keys())]
 
     # Predict on val data
     y_score = predict(clf, valid[FEATURES])
@@ -76,7 +77,7 @@ def fai(version=1):
     # Compute fairness measures
     privi_info = CONFIG_FAI[protected_attribute]
     aif_metric = get_aif_metric(
-        valid,
+        valid_fai,
         true_class,
         pred_class,
         protected_attribute,

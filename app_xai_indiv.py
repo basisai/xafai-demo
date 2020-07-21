@@ -26,14 +26,17 @@ def xai_indiv():
     x_sample = sample[FEATURES]
     y_sample = sample[TARGET].values
 
-    scores = predict(clf, x_sample)
+    preds = predict(clf, x_sample)
 
     all_shap_values, all_base_value = compute_shap(clf, x_sample)
 
-    idx = 0
     if TARGET_CLASSES is not None and len(TARGET_CLASSES) > 2:
         select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
         idx = TARGET_CLASSES.index(select_class)
+        scores = preds[:, idx]
+    else:
+        idx = 0
+        scores = preds[:, 1]
 
     # TODO
     score_df = sample[[TARGET]].copy()
