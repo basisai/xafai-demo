@@ -14,6 +14,9 @@ def plot_hist(source):
     ).encode(
         alt.X("Prediction:Q", bin=alt.Bin(maxbins=10), title="Prediction"),
         alt.Y("count()", stack=None),
+    ).properties(
+        width=280,
+        height=200,
     )
     return chart
 
@@ -60,9 +63,6 @@ def xai_indiv():
         _row_idx = st.slider("Select instance", 0, len(select_samples) - 1, 0)
         row_idx = select_samples[_row_idx]
         instance = x_sample.iloc[row_idx: row_idx + 1]
-
-        st.write("**Feature values**")
-        st.dataframe(instance.T)
 
         st.write(f"**Actual label: `{y_sample[row_idx]}`**")
         st.write(f"**Prediction: `{scores[row_idx]:.4f}`**")

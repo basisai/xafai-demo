@@ -40,20 +40,12 @@ def fai(version=1):
     y_score = predict(clf, valid[FEATURES])
 
     if version == 1:
-        st.sidebar.info("- Applicable for both binary and multiclass.\n"
-                        "- Prediction threshold is fixed a priori.\n"
-                        "- Allows user to toggle classes.")
-
         y_pred = (y_score[:, 1] > 0.5).astype(int)
 
         select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
         true_class = binarize(y_valid, select_class)
         pred_class = binarize(y_pred, select_class)
     else:
-        st.sidebar.info("- Applicable for binary only.\n"
-                        "- No selection of classes.\n"
-                        "-  Allows user to toggle prediction threshold.")
-
         st.header("Prediction Distributions")
         y_prob = y_score[:, 1]
         cutoff = st.slider("Set probability cutoff", 0., 1., 0.5, 0.01, key="proba")
