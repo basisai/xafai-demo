@@ -19,6 +19,7 @@ from xai_fairness.static_xai import (
     pdp_chart,
     pdp_heatmap,
     shap_summary_plot,
+    shap_dependence_plot,
 )
 
 MAX_DISPLAY = 15
@@ -78,15 +79,6 @@ def xai():
     )
     st.pyplot(fig)
 
-    # shap.summary_plot(all_shap_values[idx],
-    #                   x_valid,
-    #                   feature_names=FEATURES,
-    #                   max_display=MAX_DISPLAY,
-    #                   plot_size=[12, 6],
-    #                   show=False)
-    # plt.gcf().tight_layout()
-    # st.pyplot()
-
     st.subheader("SHAP Dependence Contribution Plot")
     shap_feat = st.selectbox("Select feature", FEATURES[-4:] + FEATURES[:-4])
     source = make_source_dp(all_shap_values[idx], x_valid.values, FEATURES, shap_feat)
@@ -96,14 +88,13 @@ def xai():
     shap_feats = st.multiselect("Select two features", FEATURES[-4:] + FEATURES[:-4])
     if len(shap_feats) > 1:
         shap_feat1, shap_feat2 = shap_feats[:2]
-        fig, ax = plt.subplots(figsize=(12, 6))
-        shap.dependence_plot(shap_feat1,
-                             all_shap_values[idx],
-                             x_valid,
-                             interaction_index=shap_feat2,
-                             ax=ax,
-                             show=False)
-        st.pyplot()
+        fig = shap_dependence_plot(
+            shap_feat1,
+            all_shap_values[idx],
+            x_valid,
+            interaction_index=shap_feat2,
+        )
+        st.pyplot(fig)
 
     st.header("Partial Dependence Plot")
     _x_valid = x_valid.fillna(0)  # PDPbox does not allow NaNs

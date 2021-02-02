@@ -130,7 +130,6 @@ def xai_charts(corr_df, shap_values, x_valid, feature_names, max_display, max_ro
     )
     st.altair_chart(chart, use_container_width=True)
 
-    
     fig = shap_summary_plot(
         shap_values[:max_rows],
         x_valid.iloc[:max_rows],
@@ -221,6 +220,30 @@ def dependence_chart(source, feat_col, val_col="value"):
         stroke=None
     )
     return stripplot
+
+
+def shap_dependence_plot(
+    ind,
+    shap_values=None,
+    features=None,
+    feature_names=None,
+    interaction_index="auto",
+    show=False,
+    plot_size=(12, 6),
+):
+    # TODO: convert to altair chart
+    fig, ax = plt.subplots(figsize=plot_size)
+    shap.dependence_plot(
+        ind,
+        shap_values=shap_values,
+        features=features,
+        feature_names=feature_names,
+        interaction_index=interaction_index,
+        ax=ax,
+        show=show,
+    )
+    plt.tight_layout()
+    return fig
 
 
 def model_xai_appendix(all_shap_values, x_valid, feature_names, top_features, is_multiclass):
