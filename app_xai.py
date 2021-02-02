@@ -1,3 +1,6 @@
+"""
+App for global XAI.
+"""
 import numpy as np
 import pandas as pd
 import shap
@@ -15,6 +18,7 @@ from xai_fairness.static_xai import (
     compute_pdp_interact,
     pdp_chart,
     pdp_heatmap,
+    shap_summary_plot,
 )
 
 MAX_DISPLAY = 15
@@ -64,14 +68,24 @@ def xai():
     )
     st.altair_chart(chart, use_container_width=True)
 
-    shap.summary_plot(all_shap_values[idx],
-                      x_valid,
-                      feature_names=FEATURES,
-                      max_display=MAX_DISPLAY,
-                      plot_size=[12, 6],
-                      show=False)
-    plt.gcf().tight_layout()
-    st.pyplot()
+    fig = shap_summary_plot(
+        all_shap_values[idx],
+        x_valid,
+        feature_names=FEATURES,
+        max_display=MAX_DISPLAY,
+        plot_size=[12, 6],
+        show=False,
+    )
+    st.pyplot(fig)
+
+    # shap.summary_plot(all_shap_values[idx],
+    #                   x_valid,
+    #                   feature_names=FEATURES,
+    #                   max_display=MAX_DISPLAY,
+    #                   plot_size=[12, 6],
+    #                   show=False)
+    # plt.gcf().tight_layout()
+    # st.pyplot()
 
     st.subheader("SHAP Dependence Contribution Plot")
     shap_feat = st.selectbox("Select feature", FEATURES[-4:] + FEATURES[:-4])

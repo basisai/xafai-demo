@@ -1,3 +1,6 @@
+"""
+App for individual XAI.
+"""
 import altair as alt
 import streamlit as st
 

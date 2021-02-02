@@ -94,6 +94,28 @@ def pdp_heatmap(pdp_interact_out, feature_names):
     return chart
 
 
+def shap_summary_plot(
+    shap_values,
+    features,
+    feature_names=None,
+    max_display=None,
+    plot_size="auto",
+    show=True,
+):
+    # TODO: convert to altair chart
+    fig = plt.figure()
+    shap.summary_plot(
+        shap_values,
+        features,
+        feature_names=feature_names,
+        max_display=max_display,
+        plot_size=plot_size,
+        show=show,
+    )
+    plt.tight_layout()
+    return fig
+
+
 def xai_charts(corr_df, shap_values, x_valid, feature_names, max_display, max_rows=3000):
     st.write("**SHAP Summary Plots of Top Features**")
 
@@ -108,15 +130,16 @@ def xai_charts(corr_df, shap_values, x_valid, feature_names, max_display, max_ro
     )
     st.altair_chart(chart, use_container_width=True)
 
-    # TODO: convert to altair chart
-    shap.summary_plot(shap_values[:max_rows],
-                      x_valid.iloc[:max_rows],
-                      feature_names=feature_names,
-                      max_display=max_display,
-                      plot_size=[12, 6],
-                      show=False)
-    plt.gcf().tight_layout()
-    st.pyplot()
+    
+    fig = shap_summary_plot(
+        shap_values[:max_rows],
+        x_valid.iloc[:max_rows],
+        feature_names=feature_names,
+        max_display=max_display,
+        plot_size=[12, 6],
+        show=False,
+    )
+    st.pyplot(fig)
 
 
 def model_xai_summary(shap_summary_dfs, all_shap_values, x_valid, feature_names, config, is_multiclass):

@@ -1,3 +1,6 @@
+"""
+Streamlit app.
+"""
 import streamlit as st
 
 from app_xai import xai
@@ -7,12 +10,11 @@ import app_fai_compare
 
 
 def main():
-    # max_width = 1000
     # st.markdown(
-    #     f"""
+    #     """
     #     <style>
     #     .reportview-container .main .block-container{{
-    #         max-width: {max_width}px;
+    #         max-width: 1000px;
     #     }}
     #     </style>
     #     """,
