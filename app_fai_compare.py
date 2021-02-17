@@ -5,16 +5,16 @@ import altair as alt
 import streamlit as st
 from sklearn import metrics
 
-from app_utils import load_model, load_data, predict
-from constants import FEATURES, TARGET, CONFIG_FAI
+from data.constants import FEATURES, TARGET, CONFIG_FAI
+from data.utils import load_model, load_data, predict
 from xai_fairness.static_fai import (
     get_aif_metric,
     compute_fairness_measures,
-    get_confusion_matrix_chart,
+    plot_confusion_matrix,
     plot_fmeasures_bar,
     color_red,
 )
-from xai_fairness.toolkit import prepare_dataset, get_perf_measure_by_group
+from xai_fairness.toolkit_fai import prepare_dataset, get_perf_measure_by_group
 
 CONFIG = yaml.load(open("config.yaml", "r"), Loader=yaml.SafeLoader)
 METRICS_TO_USE = CONFIG["metrics_to_use"]
@@ -70,7 +70,7 @@ def fai(debias=False):
     else:
         st.write(CONFIG["before_mitigation"])
 
-    protected_attribute = st.selectbox("Select protected column.", list(CONFIG_FAI.keys()))
+    protected_attribute = st.selectbox("Select protected feature.", list(CONFIG_FAI.keys()))
 
     # Load data
     valid = load_data("data/valid.csv")
@@ -113,12 +113,12 @@ def fai(debias=False):
 
     st.subheader("Confusion Matrices")
     cm1 = aif_metric.binary_confusion_matrix(privileged=None)
-    c1 = get_confusion_matrix_chart(cm1, "All")
+    c1 = plot_confusion_matrix(cm1, "All")
     st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
     cm2 = aif_metric.binary_confusion_matrix(privileged=True)
-    c2 = get_confusion_matrix_chart(cm2, "Privileged")
+    c2 = plot_confusion_matrix(cm2, "Privileged")
     cm3 = aif_metric.binary_confusion_matrix(privileged=False)
-    c3 = get_confusion_matrix_chart(cm3, "Unprivileged")
+    c3 = plot_confusion_matrix(cm3, "Unprivileged")
     st.altair_chart(c2 | c3, use_container_width=False)
 
     # if debias:
@@ -175,10 +175,10 @@ def fai(debias=False):
     st.subheader("Notes")
     st.write("**Equal opportunity**:")
     st.latex(r"\frac{\text{FNR}(D=\text{unprivileged})}{\text{FNR}(D=\text{privileged})}")
-    st.write("**Predictive parity**:")
-    st.latex(r"\frac{\text{PPV}(D=\text{unprivileged})}{\text{PPV}(D=\text{privileged})}")
     st.write("**Statistical parity**:")
     st.latex(r"\frac{\text{Selection Rate}(D=\text{unprivileged})}{\text{Selection Rate}(D=\text{privileged})}")
+    st.write("**Predictive parity**:")
+    st.latex(r"\frac{\text{PPV}(D=\text{unprivileged})}{\text{PPV}(D=\text{privileged})}")
 
 
 def chart_cm_comparison(orig_clf_metric, clf_metric, privileged, title):

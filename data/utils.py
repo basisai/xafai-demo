@@ -3,7 +3,7 @@ import pickle
 import pandas as pd
 import streamlit as st
 
-from xai_fairness.toolkit import compute_shap_values
+from xai_fairness.toolkit_xai import compute_shap, get_explainer
 
 
 @st.cache(allow_output_mutation=True)
@@ -25,5 +25,6 @@ def predict(clf, x):
 
 
 @st.cache(allow_output_mutation=True)
-def compute_shap(clf, x):
-    return compute_shap_values(x, model=clf, model_type="tree")
+def compute_shap_values(clf, x):
+    explainer = get_explainer(model=clf, model_type="tree")
+    return compute_shap(explainer, x)

@@ -8,9 +8,11 @@ import streamlit as st
 import altair as alt
 import matplotlib.pyplot as plt
 
-from app_utils import load_model, load_data, compute_shap
-from constants import FEATURES, TARGET_CLASSES, NUMERIC_FEATS, CATEGORICAL_FEATS, CATEGORY_MAP
-from xai_fairness.toolkit import compute_corrcoef
+from data.constants import (
+    FEATURES, TARGET_CLASSES, NUMERIC_FEATS, CATEGORICAL_FEATS,
+    CATEGORY_MAP)
+from data.utils import load_model, load_data, compute_shap_values
+from xai_fairness.toolkit_xai import compute_corrcoef
 from xai_fairness.static_xai import (
     make_source_dp,
     dependence_chart,
@@ -38,23 +40,20 @@ def _rank_features(shap_values, corrs, feature_names):
 def xai():
     st.title("Explainability AI Dashboard")
 
-    # Load model, valid data
+    # Load model, valid data. Compute SHAP values
     clf = load_model("models/lgb_clf.pkl")
     valid = load_data("data/valid.csv", sample_size=3000)
     x_valid = valid[FEATURES]
-
-    # Compute SHAP values
-    all_shap_values, _ = compute_shap(clf, x_valid)
+    all_shap_values, _ = compute_shap_values(clf, x_valid)
     all_corrs = compute_corrcoef(x_valid, all_shap_values)
 
     idx = 0
     if TARGET_CLASSES is not None and len(TARGET_CLASSES) > 2:
-        select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
-        idx = TARGET_CLASSES.index(select_class)
+        idx = st.selectbox(
+            "Select class", list(range(len(TARGET_CLASSES))), 1,
+            format_func=lambda i: TARGET_CLASSES[i])
 
-    st.header("SHAP")
-    # summarize the effects of all features
-    st.write("**SHAP Summary Plots of Top Features**")
+    st.subheader("SHAP Summary Plots of Top Features")
     source = (
         _rank_features(all_shap_values[idx], all_corrs[idx], FEATURES)
         .iloc[:MAX_DISPLAY]
@@ -96,16 +95,15 @@ def xai():
         )
         st.pyplot(fig)
 
-    st.header("Partial Dependence Plot")
     _x_valid = x_valid.fillna(0)  # PDPbox does not allow NaNs
 
-    st.subheader("Partial Dependence Plot")
+    st.subheader("PDPbox Partial Dependence Plot")
     pdp_feat = st.selectbox("Select feature", NUMERIC_FEATS + CATEGORICAL_FEATS)
     feature = CATEGORY_MAP.get(pdp_feat) or pdp_feat
     pdp_isolate_out = compute_pdp_isolate(clf, _x_valid, FEATURES, feature)
     st.altair_chart(pdp_chart(pdp_isolate_out, pdp_feat), use_container_width=False)
 
-    st.subheader("Partial Dependence Interaction Plot")
+    st.subheader("PDPbox Partial Dependence Interaction Plot")
     pdp_feats = st.multiselect("Select two features", NUMERIC_FEATS + CATEGORICAL_FEATS)
     if len(pdp_feats) > 1:
         pdp_feat1, pdp_feat2 = pdp_feats[:2]

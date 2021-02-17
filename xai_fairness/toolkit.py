@@ -206,13 +206,15 @@ def pdp_interact_plot(model,
     return fig
 
 
-def prepare_dataset(features,
-                    labels,
-                    protected_attribute,
-                    privileged_attribute_values,
-                    unprivileged_attribute_values,
-                    favorable_label=1.,
-                    unfavorable_label=0.):
+def prepare_dataset(
+        features,
+        labels,
+        protected_attribute,
+        privileged_attribute_values,
+        unprivileged_attribute_values,
+        favorable_label=1.,
+        unfavorable_label=0.,
+    ):
     """Prepare dataset for computing fairness metrics."""
     df = features.copy()
     df['outcome'] = labels
@@ -229,14 +231,16 @@ def prepare_dataset(features,
     )
 
 
-def get_aif_metric(valid,
-                   true_class,
-                   pred_class,
-                   protected_attribute,
-                   privileged_attribute_values,
-                   unprivileged_attribute_values,
-                   favorable_label=1.,
-                   unfavorable_label=0.):
+def get_aif_metric(
+        valid,
+        true_class,
+        pred_class,
+        protected_attribute,
+        privileged_attribute_values,
+        unprivileged_attribute_values,
+        favorable_label=1.,
+        unfavorable_label=0.,
+    ):
     """Get aif metric wrapper."""
     grdtruth = prepare_dataset(
         valid,
@@ -299,9 +303,14 @@ def get_fairness(grdtruth,
     return fmeasures, fig_confmats, fig_perfs
 
 
+def hmean(x, y):
+    """Harmonic mean of x and y."""
+    return 2 / (1 / x + 1 / y)
+
+
 def compute_fairness_measures(aif_metric):
     """Compute fairness measures."""
-    fmeasures = []
+    fmeasures = list()
 
     # Equal opportunity: equal FNR
     fnr_ratio = aif_metric.false_negative_rate_ratio()
@@ -312,20 +321,6 @@ def compute_fairness_measures(aif_metric):
         aif_metric.false_negative_rate(False),
         aif_metric.false_negative_rate(True),
         fnr_ratio,
-    ])
-
-    # Predictive parity: equal PPV
-    ppv_all = aif_metric.positive_predictive_value()
-    ppv_up = aif_metric.positive_predictive_value(False)
-    ppv_p = aif_metric.positive_predictive_value(True)
-    ppv_ratio = ppv_up / ppv_p
-    fmeasures.append([
-        "Predictive parity",
-        "Sufficiency",
-        ppv_all,
-        ppv_up,
-        ppv_p,
-        ppv_ratio,
     ])
 
     # Statistical parity
@@ -350,13 +345,31 @@ def compute_fairness_measures(aif_metric):
         fpr_ratio,
     ])
 
+    # Equal TPR
+    tpr_ratio = aif_metric.true_positive_rate(False) / aif_metric.true_positive_rate(True)
+    fmeasures.append([
+        "Equal TPR",
+        "Separation",
+        aif_metric.true_positive_rate(),
+        aif_metric.true_positive_rate(False),
+        aif_metric.true_positive_rate(True),
+        tpr_ratio,
+    ])
+
     # Equalized odds: equal TPR and equal FPR
-    eqodds_all = (aif_metric.true_positive_rate() +
-                  aif_metric.false_positive_rate()) / 2
-    eqodds_up = (aif_metric.true_positive_rate(False) +
-                 aif_metric.false_positive_rate(False)) / 2
-    eqodds_p = (aif_metric.true_positive_rate(True) +
-                aif_metric.false_positive_rate(True)) / 2
+    # using harmonic mean
+    eqodds_all = hmean(
+        aif_metric.true_positive_rate(),
+        aif_metric.false_positive_rate(),
+    )
+    eqodds_up = hmean(
+        aif_metric.true_positive_rate(False),
+        aif_metric.false_positive_rate(False),
+    )
+    eqodds_p = hmean(
+        aif_metric.true_positive_rate(True),
+        aif_metric.false_positive_rate(True),
+    )
     eqodds_ratio = eqodds_up / eqodds_p
     fmeasures.append([
         "Equalized odds",
@@ -367,13 +380,45 @@ def compute_fairness_measures(aif_metric):
         eqodds_ratio,
     ])
 
+    # Predictive parity: equal PPV
+    ppv_all = aif_metric.positive_predictive_value()
+    ppv_up = aif_metric.positive_predictive_value(False)
+    ppv_p = aif_metric.positive_predictive_value(True)
+    ppv_ratio = ppv_up / ppv_p
+    fmeasures.append([
+        "Predictive parity",
+        "Sufficiency",
+        ppv_all,
+        ppv_up,
+        ppv_p,
+        ppv_ratio,
+    ])
+
+    # Equal NPV
+    tpr_ratio = aif_metric.negative_predictive_value(False) / aif_metric.negative_predictive_value(True)
+    fmeasures.append([
+        "Equal NPV",
+        "Sufficiency",
+        aif_metric.negative_predictive_value(),
+        aif_metric.negative_predictive_value(False),
+        aif_metric.negative_predictive_value(True),
+        tpr_ratio,
+    ])
+
     # Conditional use accuracy equality: equal PPV and equal NPV
-    acceq_all = (aif_metric.positive_predictive_value(False) +
-                 aif_metric.negative_predictive_value(False)) / 2
-    acceq_up = (aif_metric.positive_predictive_value(False) +
-                aif_metric.negative_predictive_value(False)) / 2
-    acceq_p = (aif_metric.positive_predictive_value(True) +
-               aif_metric.negative_predictive_value(True)) / 2
+    # using harmonic mean
+    acceq_all = hmean(
+        aif_metric.positive_predictive_value(False),
+        aif_metric.negative_predictive_value(False),
+    )
+    acceq_up = hmean(
+        aif_metric.positive_predictive_value(False),
+        aif_metric.negative_predictive_value(False),
+    )
+    acceq_p = hmean(
+        aif_metric.positive_predictive_value(True),
+        aif_metric.negative_predictive_value(True),
+    )
     acceq_ratio = acceq_up / acceq_p
     fmeasures.append([
         "Conditional use accuracy equality",
@@ -384,8 +429,11 @@ def compute_fairness_measures(aif_metric):
         acceq_ratio,
     ])
 
-    return pd.DataFrame(fmeasures, columns=[
+    df = pd.DataFrame(fmeasures, columns=[
         "Metric", "Criterion", "All", "Unprivileged", "Privileged", "Ratio"])
+    df.index.name = "order"
+    df.reset_index(inplace=True)
+    return df
 
 
 def plot_confusion_matrix_by_group(aif_metric, figsize=(16, 4)):
@@ -465,8 +513,3 @@ def plot_performance_by_group(aif_metric, metric_name, ax=None):
     ax.set_xlabel(None)
 
     _add_annotations(ax)
-
-
-def color_red(x):
-    """Styling: color red."""
-    return "color: red" if x == "No" else "color: black"

@@ -35,14 +35,14 @@ def main():
     elif select_db == "Individual explainability":
         xai_indiv()
     elif select_db == "Fairness":
-        select_ver = st.selectbox("Select version.", ["Version 1", "Version 2"])
+        select_ver = st.sidebar.selectbox("Select version", ["Version 1", "Version 2"])
         if select_ver == "Version 1":
-            st.info("- Applicable for both binary and multiclass.\n"
+            st.sidebar.info("- Applicable for both binary and multiclass.\n"
                     "- Prediction threshold is fixed a priori.\n"
                     "- Allows user to toggle classes.")
             fai(version=1)
         else:
-            st.info("- Applicable for binary only.\n"
+            st.sidebar.info("- Applicable for binary only.\n"
                     "- No selection of classes.\n"
                     "-  Allows user to toggle prediction threshold.")
             fai(version=2)

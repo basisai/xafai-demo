@@ -6,8 +6,8 @@ import pandas as pd
 import streamlit as st
 from sklearn import metrics
 
-from app_utils import load_model, load_data, predict
-from constants import FEATURES, TARGET, TARGET_CLASSES, CONFIG_FAI
+from data.constants import FEATURES, TARGET, TARGET_CLASSES, CONFIG_FAI
+from data.utils import load_model, load_data, predict
 from xai_fairness.static_fai import (
     binarize,
     get_aif_metric,
@@ -29,29 +29,28 @@ def print_model_perf(y_val, y_pred):
 
 
 def fai(version=1):
-    st.title("Fairness AI Dashboard")
+    st.title("Fairness Dashboard")
 
-    protected_attribute = st.selectbox("Select protected column", list(CONFIG_FAI.keys()))
-
-    # Load sample, data
+    # Load sample, data. 
     clf = load_model("models/lgb_clf.pkl")
     valid = load_data("data/valid.csv")
     y_valid = valid[TARGET].values
     valid_fai = valid[list(CONFIG_FAI.keys())]
-
-    # Predict on val data
     y_score = predict(clf, valid[FEATURES])
+
+    protected_attribute = st.selectbox("Select protected feature.", list(CONFIG_FAI.keys()))
 
     if version == 1:
         y_pred = (y_score[:, 1] > 0.5).astype(int)
 
-        select_class = st.selectbox("Select class", TARGET_CLASSES, 1)
+        select_class = st.selectbox(
+            "Select target class to be the positive class.", TARGET_CLASSES, 1)
         true_class = binarize(y_valid, select_class)
         pred_class = binarize(y_pred, select_class)
     else:
         st.header("Prediction Distributions")
         y_prob = y_score[:, 1]
-        cutoff = st.slider("Set probability cutoff", 0., 1., 0.5, 0.01, key="proba")
+        cutoff = st.slider("Set probability cutoff.", 0., 1., 0.5, 0.01, key="proba")
         y_pred = (y_prob > cutoff).astype(int)
 
         source = pd.DataFrame({
@@ -67,7 +66,7 @@ def fai(version=1):
         pred_class = y_pred
 
     st.header("Algorithmic Fairness Metrics")    
-    fthresh = st.slider("Set fairness threshold", 0., 1., 0.2, 0.05, key="fairness")
+    fthresh = st.slider("Set fairness threshold.", 0., 1., 0.2, 0.05, key="fairness")
 
     # Compute fairness measures
     privi_info = CONFIG_FAI[protected_attribute]
@@ -87,11 +86,15 @@ def fai(version=1):
     st.subheader("Notes")
     st.write("**Equal opportunity**:")
     st.latex(r"\frac{\text{FNR}(D=\text{unprivileged})}{\text{FNR}(D=\text{privileged})}")
-    st.write("**Predictive parity**:")
-    st.latex(r"\frac{\text{PPV}(D=\text{unprivileged})}{\text{PPV}(D=\text{privileged})}")
     st.write("**Statistical parity**:")
     st.latex(r"\frac{\text{Selection Rate}(D=\text{unprivileged})}{\text{Selection Rate}(D=\text{privileged})}")
+    st.write("**Predictive parity**:")
+    st.latex(r"\frac{\text{PPV}(D=\text{unprivileged})}{\text{PPV}(D=\text{privileged})}")
 
 
 if __name__ == "__main__":
-    fai()
+    select_ver = st.sidebar.selectbox("Select version", ["Version 1", "Version 2"])
+    if select_ver == "Version 1":
+        fai(version=1)
+    else:
+        fai(version=2)

@@ -6,17 +6,21 @@ import pandas as pd
 import altair as alt
 import streamlit as st
 
-from .toolkit import (
+from xai_fairness.toolkit_fai import (
     get_aif_metric,
     compute_fairness_measures,
     get_perf_measure_by_group,
-    color_red,
 )
 
 
 def binarize(y, label):
     """Binarize array-like data according to label."""
     return (np.array(y) == label).astype(int)
+
+
+def color_red(x):
+    """Styling: color red."""
+    return "color: red" if x == "No" else "color: black"
 
 
 def plot_hist(source, cutoff):
@@ -52,7 +56,7 @@ def plot_fmeasures_bar(df, threshold):
     base = alt.Chart(source)
     bars = base.mark_bar().encode(
         alt.X("Ratio:Q"),
-        alt.Y("Metric:O"),
+        alt.Y("Metric:O", sort=alt.SortField("order")),
         alt.Color("Fair?:N", scale=alt.Scale(
             domain=["Yes", "No"], range=["#1E88E5", "#FF0D57"])),
         alt.Tooltip(["Metric", "Ratio"]),
@@ -72,7 +76,7 @@ def custom_fmeasures(aif_metric, threshold=0.2, fairness_metrics=None):
     """To customise fairness measures dataframe."""
     fmeasures = compute_fairness_measures(aif_metric)
     if fairness_metrics is not None:
-        fmeasures = fmeasures[fmeasures["Metric"].isin(fairness_metrics)]
+        fmeasures = fmeasures.query(f"Metric == {fairness_metrics}")
     fmeasures["Fair?"] = fmeasures["Ratio"].apply(
         lambda x: "Yes" if np.abs(x - 1) < threshold else "No")
     return fmeasures
@@ -126,33 +130,37 @@ def alg_fai_summary(valid, unq_fai_classes, true_class, pred_class, config_fai, 
     return final_fairness
 
 
-def get_confusion_matrix_chart(cm, title):
-    """Plot custom confusion matrix chart."""
-    source = pd.DataFrame([[0, 0, cm['TN']],
-                           [0, 1, cm['FP']],
-                           [1, 0, cm['FN']],
-                           [1, 1, cm['TP']],
-                           ], columns=["actual values", "predicted values", "count"])
+def plot_confusion_matrix(cm, title):
+    """Plot custom confusion matrix."""
+    source = pd.DataFrame(
+        [
+            ["negative", "negative", cm["TN"]],
+            ["negative", "positive", cm["FP"]],
+            ["positive", "negative", cm["FN"]],
+            ["positive", "positive", cm["TP"]],
+        ],
+        columns=["actual", "predicted", "value"],
+    )
 
     base = alt.Chart(source).encode(
-        y='actual values:O',
-        x='predicted values:O',
+        y="actual:O",
+        x="predicted:O",
     ).properties(
         width=200,
         height=200,
         title=title,
     )
     rects = base.mark_rect().encode(
-        color='count:Q',
+        color="value:Q",
     )
     text = base.mark_text(
-        align='center',
-        baseline='middle',
-        color='black',
+        align="center",
+        baseline="middle",
+        color="black",
         size=12,
         dx=0,
     ).encode(
-        text='count:Q',
+        text="value:Q",
     )
     return rects + text
 
@@ -171,9 +179,9 @@ def alg_fai(fmeasures, aif_metric, threshold):
     st.write("**Performance Metrics**")
     all_perfs = []
     for metric_name in [
-            'TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC',
-            'selection_rate', 'precision', 'recall', 'sensitivity',
-            'specificity', 'power', 'error_rate']:
+            "TPR", "TNR", "FPR", "FNR", "PPV", "NPV", "FDR", "FOR", "ACC",
+            "selection_rate", "precision", "recall", "sensitivity",
+            "specificity", "power", "error_rate"]:
         df = get_perf_measure_by_group(aif_metric, metric_name)
         c = alt.Chart(df).mark_bar().encode(
             x=f"{metric_name}:Q",
@@ -187,12 +195,12 @@ def alg_fai(fmeasures, aif_metric, threshold):
 
     st.write("**Confusion Matrices**")
     cm1 = aif_metric.binary_confusion_matrix(privileged=None)
-    c1 = get_confusion_matrix_chart(cm1, "All")
+    c1 = plot_confusion_matrix(cm1, "All")
     st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
     cm2 = aif_metric.binary_confusion_matrix(privileged=True)
-    c2 = get_confusion_matrix_chart(cm2, "Privileged")
+    c2 = plot_confusion_matrix(cm2, "Privileged")
     cm3 = aif_metric.binary_confusion_matrix(privileged=False)
-    c3 = get_confusion_matrix_chart(cm3, "Unprivileged")
+    c3 = plot_confusion_matrix(cm3, "Unprivileged")
     st.altair_chart(c2 | c3, use_container_width=False)
 
 
