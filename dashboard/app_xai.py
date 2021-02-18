@@ -37,7 +37,7 @@ def _rank_features(shap_values, corrs, feature_names):
 
 
 def xai():
-    st.title("Global XAI Dashboard")
+    st.title("Global XAI")
 
     # Load model, valid data, SHAP values
     clf, x_valid, all_shap_values, all_corrs = xai_data()

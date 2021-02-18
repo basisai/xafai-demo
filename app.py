@@ -3,10 +3,10 @@ Streamlit app.
 """
 import streamlit as st
 
-from app_xai import xai
-from app_fai import fai
-from app_xai_indiv import xai_indiv
-import app_fai_compare
+from dashboard.app_xai import xai
+from dashboard.app_fai import fai
+from dashboard.app_xai_indiv import xai_indiv
+from dashboard import app_fai_compare
 
 
 def main():
@@ -21,7 +21,9 @@ def main():
     #     unsafe_allow_html=True,
     # )
 
-    select_ex = st.sidebar.selectbox("Select example", ["Binary classification"])
+    select_ex = st.sidebar.selectbox("Select example", [
+        "Binary classification",
+    ])
 
     select_db = st.sidebar.selectbox("Select dashboard", [
         "Global explainability",
