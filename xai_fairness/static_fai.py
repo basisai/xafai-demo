@@ -1,9 +1,9 @@
 """
 Helpers for fairness
 """
-import altair as alt
 import numpy as np
 import pandas as pd
+import altair as alt
 import streamlit as st
 
 from xai_fairness.toolkit_fai import (
@@ -126,9 +126,21 @@ def alg_fai(fmeasures, aif_metric, threshold):
     st.dataframe(
         fmeasures[["Metric", "Unprivileged", "Privileged", "Ratio", "Fair?"]]
         .style.applymap(color_red, subset=["Fair?"])
+        .format({"Unprivileged": "{:.3f}", "Privileged": "{:.3f}", "Ratio": "{:.3f}"})
     )
 
-    st.write("**Performance Metrics**")
+    st.subheader("Confusion Matrices")
+    cm1 = aif_metric.binary_confusion_matrix(privileged=None)
+    c1 = plot_confusion_matrix(cm1, "All")
+    st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
+    cm2 = aif_metric.binary_confusion_matrix(privileged=True)
+    c2 = plot_confusion_matrix(cm2, "Privileged")
+    cm3 = aif_metric.binary_confusion_matrix(privileged=False)
+    c3 = plot_confusion_matrix(cm3, "Unprivileged")
+    st.altair_chart(c2 | c3, use_container_width=False)
+
+    st.header("Annex")
+    st.subheader("Performance Metrics")
     all_perfs = []
     for metric_name in [
             "TPR", "TNR", "FPR", "FNR", "PPV", "NPV", "FDR", "FOR", "ACC",
@@ -144,16 +156,6 @@ def alg_fai(fmeasures, aif_metric, threshold):
 
     all_charts = alt.concat(*all_perfs, columns=1)
     st.altair_chart(all_charts, use_container_width=False)
-
-    st.write("**Confusion Matrices**")
-    cm1 = aif_metric.binary_confusion_matrix(privileged=None)
-    c1 = plot_confusion_matrix(cm1, "All")
-    st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
-    cm2 = aif_metric.binary_confusion_matrix(privileged=True)
-    c2 = plot_confusion_matrix(cm2, "Privileged")
-    cm3 = aif_metric.binary_confusion_matrix(privileged=False)
-    c3 = plot_confusion_matrix(cm3, "Unprivileged")
-    st.altair_chart(c2 | c3, use_container_width=False)
 
 
 def fairness_notes():

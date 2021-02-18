@@ -65,7 +65,12 @@ def fai(version=1):
         privi_info["privileged_attribute_values"],
         privi_info["unprivileged_attribute_values"],
     )
+    # from xai_fairness.toolkit_fai import compute_fairness_measures
+    # fmeasures = compute_fairness_measures(aif_metric)
+    # st.write(fmeasures)
+
     fmeasures = custom_fmeasures(aif_metric, threshold=fthresh)
+    # st.write(fmeasures)
     alg_fai(fmeasures, aif_metric, fthresh)
 
     st.subheader("Notes")

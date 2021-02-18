@@ -4,25 +4,10 @@ App for individual XAI.
 import altair as alt
 import streamlit as st
 
-from xai_fairness.static_xai import make_source_waterfall, waterfall_chart
+from xai_fairness.static_xai import make_source_waterfall, waterfall_chart, plot_hist
 
 from data.constants import FEATURES, TARGET, TARGET_CLASSES
 from data.utils import xai_indiv_data
-
-
-def plot_hist(source):
-    """Plot custom histogram."""
-    base = alt.Chart(source)
-    chart = base.mark_area(
-        opacity=0.5, interpolate="step",
-    ).encode(
-        alt.X("Prediction:Q", bin=alt.Bin(maxbins=10), title="Prediction"),
-        alt.Y("count()", stack=None),
-    ).properties(
-        width=280,
-        height=200,
-    )
-    return chart
 
 
 def xai_indiv():
@@ -83,7 +68,7 @@ def xai_indiv():
     df = instance.copy().T
     df.columns = ["feature_value"]
     df["shap_value"] = shap_values
-    st.write(df)    
+    st.write(df)
 
 
 if __name__ == "__main__":

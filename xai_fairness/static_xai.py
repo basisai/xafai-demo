@@ -216,6 +216,21 @@ def waterfall_chart(source, decimal=3):
     return bars + color1 + color2 + text
 
 
+def plot_hist(source):
+    """Plot custom histogram."""
+    base = alt.Chart(source)
+    chart = base.mark_area(
+        opacity=0.5, interpolate="step",
+    ).encode(
+        alt.X("Prediction:Q", bin=alt.Bin(maxbins=10), title="Prediction"),
+        alt.Y("count()", stack=None),
+    ).properties(
+        width=280,
+        height=200,
+    )
+    return chart
+
+
 ###############################################################################
 # Additional
 def xai_charts(corr_df, shap_values, x_valid, feature_names, max_display, max_rows=3000):
