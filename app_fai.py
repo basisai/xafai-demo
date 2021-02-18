@@ -1,44 +1,31 @@
 """
 App for FAI.
 """
+import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn import metrics
 
-from data.constants import FEATURES, TARGET, TARGET_CLASSES, CONFIG_FAI
-from data.utils import load_model, load_data, predict
 from xai_fairness.static_fai import (
     binarize,
     get_aif_metric,
-    compute_fairness_measures,
-    plot_hist,
+    custom_fmeasures,
     alg_fai,
+    fairness_notes,
+    plot_hist,
 )
 
-
-def print_model_perf(y_val, y_pred):
-    text = ""
-    text += "Model accuracy = {:.4f}\n".format(metrics.accuracy_score(y_val, y_pred))
-    text += "Weighted Average Precision = {:.4f}\n".format(
-        metrics.precision_score(y_val, y_pred, average="weighted"))
-    text += "Weighted Average Recall = {:.4f}\n\n".format(
-        metrics.recall_score(y_val, y_pred, average="weighted"))
-    text += metrics.classification_report(y_val, y_pred, digits=4)
-    return text
+from data.constants import FEATURES, TARGET, TARGET_CLASSES, PROTECTED_FEATURES
+from data.utils import fai_data, print_model_perf
 
 
 def fai(version=1):
-    st.title("Fairness Dashboard")
+    st.title("Fairness")
 
-    # Load sample, data. 
-    clf = load_model("models/lgb_clf.pkl")
-    valid = load_data("data/valid.csv")
-    y_valid = valid[TARGET].values
-    valid_fai = valid[list(CONFIG_FAI.keys())]
-    y_score = predict(clf, valid[FEATURES])
+    # Load sample, data.
+    x_fai, y_valid, y_score = fai_data()
 
-    protected_attribute = st.selectbox("Select protected feature.", list(CONFIG_FAI.keys()))
+    protected_attribute = st.selectbox("Select protected feature.", list(PROTECTED_FEATURES.keys()))
 
     if version == 1:
         y_pred = (y_score[:, 1] > 0.5).astype(int)
@@ -54,7 +41,7 @@ def fai(version=1):
         y_pred = (y_prob > cutoff).astype(int)
 
         source = pd.DataFrame({
-            protected_attribute: valid[protected_attribute].values,
+            protected_attribute: x_fai[protected_attribute].values,
             "Prediction": y_prob,
         })
         st.altair_chart(plot_hist(source, cutoff), use_container_width=True)
@@ -69,27 +56,20 @@ def fai(version=1):
     fthresh = st.slider("Set fairness threshold.", 0., 1., 0.2, 0.05, key="fairness")
 
     # Compute fairness measures
-    privi_info = CONFIG_FAI[protected_attribute]
+    privi_info = PROTECTED_FEATURES[protected_attribute]
     aif_metric = get_aif_metric(
-        valid_fai,
+        x_fai,
         true_class,
         pred_class,
         protected_attribute,
         privi_info["privileged_attribute_values"],
         privi_info["unprivileged_attribute_values"],
     )
-    fmeasures = compute_fairness_measures(aif_metric)
-    fmeasures["Fair?"] = fmeasures["Ratio"].apply(
-        lambda x: "Yes" if np.abs(x - 1) < fthresh else "No")
+    fmeasures = custom_fmeasures(aif_metric, threshold=fthresh)
     alg_fai(fmeasures, aif_metric, fthresh)
 
     st.subheader("Notes")
-    st.write("**Equal opportunity**:")
-    st.latex(r"\frac{\text{FNR}(D=\text{unprivileged})}{\text{FNR}(D=\text{privileged})}")
-    st.write("**Statistical parity**:")
-    st.latex(r"\frac{\text{Selection Rate}(D=\text{unprivileged})}{\text{Selection Rate}(D=\text{privileged})}")
-    st.write("**Predictive parity**:")
-    st.latex(r"\frac{\text{PPV}(D=\text{unprivileged})}{\text{PPV}(D=\text{privileged})}")
+    fairness_notes()
 
 
 if __name__ == "__main__":

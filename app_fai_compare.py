@@ -1,34 +1,27 @@
-import yaml
+"""
+App for fairness comparison.
+"""
+import altair as alt
 import numpy as np
 import pandas as pd
-import altair as alt
 import streamlit as st
-from sklearn import metrics
+import yaml
 
-from data.constants import FEATURES, TARGET, CONFIG_FAI
-from data.utils import load_model, load_data, predict
 from xai_fairness.static_fai import (
     get_aif_metric,
-    compute_fairness_measures,
+    custom_fmeasures,
     plot_confusion_matrix,
     plot_fmeasures_bar,
     color_red,
+    fairness_notes,
 )
 from xai_fairness.toolkit_fai import prepare_dataset, get_perf_measure_by_group
 
+from data.constants import FEATURES, TARGET, PROTECTED_FEATURES
+from data.utils import load_model, load_data, predict, print_model_perf
+
 CONFIG = yaml.load(open("config.yaml", "r"), Loader=yaml.SafeLoader)
 METRICS_TO_USE = CONFIG["metrics_to_use"]
-
-
-def print_model_perf(y_val, y_pred):
-    text = ""
-    text += "Model accuracy = {:.4f}\n".format(metrics.accuracy_score(y_val, y_pred))
-    text += "Weighted Average Precision = {:.4f}\n".format(
-        metrics.precision_score(y_val, y_pred, average="weighted"))
-    text += "Weighted Average Recall = {:.4f}\n\n".format(
-        metrics.recall_score(y_val, y_pred, average="weighted"))
-    text += metrics.classification_report(y_val, y_pred, digits=4)
-    return text
 
 
 @st.cache
@@ -50,8 +43,8 @@ def prepare_pred(x_valid, y_valid, debias=False):
             x_valid,
             y_pred,
             attr,
-            CONFIG_FAI[attr]["privileged_attribute_values"],
-            CONFIG_FAI[attr]["unprivileged_attribute_values"],
+            PROTECTED_FEATURES[attr]["privileged_attribute_values"],
+            PROTECTED_FEATURES[attr]["unprivileged_attribute_values"],
         )
 
         adj_pred_val = model.predict(predicted_val)
@@ -70,7 +63,7 @@ def fai(debias=False):
     else:
         st.write(CONFIG["before_mitigation"])
 
-    protected_attribute = st.selectbox("Select protected feature.", list(CONFIG_FAI.keys()))
+    protected_attribute = st.selectbox("Select protected feature.", list(PROTECTED_FEATURES.keys()))
 
     # Load data
     valid = load_data("data/valid.csv")
@@ -89,7 +82,7 @@ def fai(debias=False):
              f"if **ratio is between {1 - fthresh:.2f} and {1 + fthresh:.2f}**.")
 
     # Compute fairness measures
-    privi_info = CONFIG_FAI[protected_attribute]
+    privi_info = PROTECTED_FEATURES[protected_attribute]
     aif_metric = get_aif_metric(
         valid,
         y_valid,
@@ -98,10 +91,7 @@ def fai(debias=False):
         privi_info["privileged_attribute_values"],
         privi_info["unprivileged_attribute_values"],
     )
-    fmeasures = compute_fairness_measures(aif_metric)
-    fmeasures = fmeasures[fmeasures["Metric"].isin(METRICS_TO_USE)]
-    fmeasures["Fair?"] = fmeasures["Ratio"].apply(
-        lambda x: "Yes" if np.abs(x - 1) < fthresh else "No")
+    fmeasures = custom_fmeasures(aif_metric, threshold=fthresh, fairness_metrics=METRICS_TO_USE)
 
     st.altair_chart(plot_fmeasures_bar(fmeasures, fthresh), use_container_width=True)
     
@@ -173,12 +163,7 @@ def fai(debias=False):
     st.altair_chart(all_charts, use_container_width=False)
 
     st.subheader("Notes")
-    st.write("**Equal opportunity**:")
-    st.latex(r"\frac{\text{FNR}(D=\text{unprivileged})}{\text{FNR}(D=\text{privileged})}")
-    st.write("**Statistical parity**:")
-    st.latex(r"\frac{\text{Selection Rate}(D=\text{unprivileged})}{\text{Selection Rate}(D=\text{privileged})}")
-    st.write("**Predictive parity**:")
-    st.latex(r"\frac{\text{PPV}(D=\text{unprivileged})}{\text{PPV}(D=\text{privileged})}")
+    fairness_notes()
 
 
 def chart_cm_comparison(orig_clf_metric, clf_metric, privileged, title):
@@ -190,7 +175,7 @@ def chart_cm_comparison(orig_clf_metric, clf_metric, privileged, title):
 
 
 def compare():
-    protected_attribute = st.selectbox("Select protected column.", list(CONFIG_FAI.keys()))
+    protected_attribute = st.selectbox("Select protected column.", list(PROTECTED_FEATURES.keys()))
 
     # Load data
     valid = load_data("data/valid.csv")
@@ -213,7 +198,7 @@ def compare():
              f"if **ratio is between {1 - fthresh:.2f} and {1 + fthresh:.2f}**.")
 
     # Compute fairness measures
-    privi_info = CONFIG_FAI[protected_attribute]
+    privi_info = PROTECTED_FEATURES[protected_attribute]
     orig_aif_metric = get_aif_metric(
         valid,
         y_valid,

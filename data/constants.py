@@ -33,7 +33,7 @@ TARGET_CLASSES = [0, 1]
 TARGET_NAMES = ['<=50K', '>50K']
 
 # List privileged info
-CONFIG_FAI = {
+PROTECTED_FEATURES = {
     'Sex=Male': {
         'privileged_attribute_values': [1],
         'unprivileged_attribute_values': [0],

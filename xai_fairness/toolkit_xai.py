@@ -1,6 +1,7 @@
 """
 Toolkit for XAI.
 """
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
@@ -84,6 +85,54 @@ def compute_corrcoef(features, shap_values):
             corrs.append(df_.corr(method="pearson").values[0, 1])
         all_corrs.append(np.array(corrs))
     return all_corrs
+
+
+def shap_summary_plot(
+        shap_values,
+        features,
+        feature_names=None,
+        max_display=None,
+        plot_size=(12, 6),
+        show=False,
+    ):
+    """Plot SHAP summary plot."""
+    # TODO: convert to altair chart
+    fig = plt.figure()
+    shap.summary_plot(
+        shap_values,
+        features,
+        feature_names=feature_names,
+        max_display=max_display,
+        plot_size=plot_size,
+        show=show,
+    )
+    plt.tight_layout()
+    return fig
+
+
+def shap_dependence_plot(
+        ind,
+        shap_values=None,
+        features=None,
+        feature_names=None,
+        interaction_index="auto",
+        show=False,
+        plot_size=(12, 6),
+    ):
+    """Plot dependence interaction chart."""
+    # TODO: convert to altair chart
+    fig, ax = plt.subplots(figsize=plot_size)
+    shap.dependence_plot(
+        ind,
+        shap_values=shap_values,
+        features=features,
+        feature_names=feature_names,
+        interaction_index=interaction_index,
+        ax=ax,
+        show=show,
+    )
+    plt.tight_layout()
+    return fig
 
 
 def pdp_plot(

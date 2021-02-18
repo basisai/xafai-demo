@@ -4,9 +4,10 @@ App for individual XAI.
 import altair as alt
 import streamlit as st
 
-from data.constants import FEATURES, TARGET, TARGET_CLASSES
-from data.utils import load_model, load_data, predict, compute_shap_values
 from xai_fairness.static_xai import make_source_waterfall, waterfall_chart
+
+from data.constants import FEATURES, TARGET, TARGET_CLASSES
+from data.utils import xai_indiv_data
 
 
 def plot_hist(source):
@@ -25,15 +26,12 @@ def plot_hist(source):
 
 
 def xai_indiv():
-    st.title("Individual Instance Explainability")
+    st.title("Individual XAI")
     
-    # Load model, valid data. Compute SHAP values
-    clf = load_model("models/lgb_clf.pkl")
-    sample = load_data("data/valid.csv")
+    # Load model, valid data, SHAP values
+    sample, preds, all_shap_values, all_base_value = xai_indiv_data()
     x_sample = sample[FEATURES]
     y_sample = sample[TARGET].values
-    preds = predict(clf, x_sample)
-    all_shap_values, all_base_value = compute_shap_values(clf, x_sample)
 
     if TARGET_CLASSES is not None and len(TARGET_CLASSES) > 2:
         idx = st.selectbox(
@@ -44,11 +42,12 @@ def xai_indiv():
         idx = 0
         scores = preds[:, 1]
 
-    # TODO
     score_df = sample[[TARGET]].copy()
     score_df["Prediction"] = scores
-    charts = [plot_hist(score_df[score_df[TARGET] == lb]).properties(title=f"Class = {lb}")
-              for lb in TARGET_CLASSES]
+    charts = [
+        plot_hist(score_df[score_df[TARGET] == lb]).properties(title=f"Class = {lb}")
+        for lb in TARGET_CLASSES
+    ]
     st.altair_chart(alt.concat(*charts, columns=2), use_container_width=True)
 
     # customized
@@ -60,7 +59,7 @@ def xai_indiv():
     class_idx = TARGET_CLASSES.index(select_class)
     select_bin = c1.selectbox("Select prediction bin", bin_options)
     bin_idx = bin_options.index(select_bin)
-    select_samples = sample.index[(y_sample == class_idx) & (scores_bin == bin_idx)]
+    select_samples = x_sample.index[(y_sample == class_idx) & (scores_bin == bin_idx)]
 
     if len(select_samples) == 0:
         st.write("**No instances found.**")

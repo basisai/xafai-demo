@@ -106,7 +106,7 @@ def compute_fairness_measures(aif_metric):
     # Predictive equality: equal FPR
     fpr_ratio = aif_metric.false_positive_rate_ratio()
     fmeasures.append([
-        "Predictive equality",
+        "Predictive equality (equal FPR)",
         "Separation",
         aif_metric.false_positive_rate(),
         aif_metric.false_positive_rate(False),
@@ -125,29 +125,29 @@ def compute_fairness_measures(aif_metric):
         tpr_ratio,
     ])
 
-    # Equalized odds: equal TPR and equal FPR
-    # using harmonic mean
-    eqodds_all = hmean(
-        aif_metric.true_positive_rate(),
-        aif_metric.false_positive_rate(),
-    )
-    eqodds_up = hmean(
-        aif_metric.true_positive_rate(False),
-        aif_metric.false_positive_rate(False),
-    )
-    eqodds_p = hmean(
-        aif_metric.true_positive_rate(True),
-        aif_metric.false_positive_rate(True),
-    )
-    eqodds_ratio = eqodds_up / eqodds_p
-    fmeasures.append([
-        "Equalized odds",
-        "Separation",
-        eqodds_all,
-        eqodds_up,
-        eqodds_p,
-        eqodds_ratio,
-    ])
+    # # Equalized odds: equal TPR and equal FPR
+    # # using harmonic mean
+    # eqodds_all = hmean(
+    #     aif_metric.true_positive_rate(),
+    #     aif_metric.false_positive_rate(),
+    # )
+    # eqodds_up = hmean(
+    #     aif_metric.true_positive_rate(False),
+    #     aif_metric.false_positive_rate(False),
+    # )
+    # eqodds_p = hmean(
+    #     aif_metric.true_positive_rate(True),
+    #     aif_metric.false_positive_rate(True),
+    # )
+    # eqodds_ratio = eqodds_up / eqodds_p
+    # fmeasures.append([
+    #     "Equalized odds",
+    #     "Separation",
+    #     eqodds_all,
+    #     eqodds_up,
+    #     eqodds_p,
+    #     eqodds_ratio,
+    # ])
 
     # Predictive parity: equal PPV
     ppv_all = aif_metric.positive_predictive_value()
@@ -155,7 +155,7 @@ def compute_fairness_measures(aif_metric):
     ppv_p = aif_metric.positive_predictive_value(True)
     ppv_ratio = ppv_up / ppv_p
     fmeasures.append([
-        "Predictive parity",
+        "Predictive parity (equal PPV)",
         "Sufficiency",
         ppv_all,
         ppv_up,
@@ -174,29 +174,29 @@ def compute_fairness_measures(aif_metric):
         tpr_ratio,
     ])
 
-    # Conditional use accuracy equality: equal PPV and equal NPV
-    # using harmonic mean
-    acceq_all = hmean(
-        aif_metric.positive_predictive_value(False),
-        aif_metric.negative_predictive_value(False),
-    )
-    acceq_up = hmean(
-        aif_metric.positive_predictive_value(False),
-        aif_metric.negative_predictive_value(False),
-    )
-    acceq_p = hmean(
-        aif_metric.positive_predictive_value(True),
-        aif_metric.negative_predictive_value(True),
-    )
-    acceq_ratio = acceq_up / acceq_p
-    fmeasures.append([
-        "Conditional use accuracy equality",
-        "Sufficiency",
-        acceq_all,
-        acceq_up,
-        acceq_p,
-        acceq_ratio,
-    ])
+    # # Conditional use accuracy equality: equal PPV and equal NPV
+    # # using harmonic mean
+    # acceq_all = hmean(
+    #     aif_metric.positive_predictive_value(False),
+    #     aif_metric.negative_predictive_value(False),
+    # )
+    # acceq_up = hmean(
+    #     aif_metric.positive_predictive_value(False),
+    #     aif_metric.negative_predictive_value(False),
+    # )
+    # acceq_p = hmean(
+    #     aif_metric.positive_predictive_value(True),
+    #     aif_metric.negative_predictive_value(True),
+    # )
+    # acceq_ratio = acceq_up / acceq_p
+    # fmeasures.append([
+    #     "Conditional use accuracy equality",
+    #     "Sufficiency",
+    #     acceq_all,
+    #     acceq_up,
+    #     acceq_p,
+    #     acceq_ratio,
+    # ])
 
     df = pd.DataFrame(fmeasures, columns=[
         "Metric", "Criterion", "All", "Unprivileged", "Privileged", "Ratio"])

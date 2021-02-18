@@ -1,18 +1,14 @@
 """
 App for global XAI.
 """
+import altair as alt
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import shap
 import streamlit as st
-import altair as alt
-import matplotlib.pyplot as plt
 
-from data.constants import (
-    FEATURES, TARGET_CLASSES, NUMERIC_FEATS, CATEGORICAL_FEATS,
-    CATEGORY_MAP)
-from data.utils import load_model, load_data, compute_shap_values
-from xai_fairness.toolkit_xai import compute_corrcoef
+from xai_fairness.toolkit_xai import shap_summary_plot, shap_dependence_plot
 from xai_fairness.static_xai import (
     make_source_dp,
     dependence_chart,
@@ -20,9 +16,11 @@ from xai_fairness.static_xai import (
     compute_pdp_interact,
     pdp_chart,
     pdp_heatmap,
-    shap_summary_plot,
-    shap_dependence_plot,
 )
+
+from data.constants import (
+    FEATURES, TARGET_CLASSES, NUMERIC_FEATS, CATEGORICAL_FEATS, CATEGORY_MAP)
+from data.utils import xai_data
 
 MAX_DISPLAY = 15
 
@@ -33,19 +31,16 @@ def _rank_features(shap_values, corrs, feature_names):
         "mas_value": np.abs(shap_values).mean(axis=0),
         "corrcoef": corrs,
     })
-    shap_summary_df = shap_summary_df.sort_values("mas_value", ascending=False, ignore_index=True)
+    shap_summary_df = shap_summary_df.sort_values(
+        "mas_value", ascending=False, ignore_index=True)
     return shap_summary_df
 
 
 def xai():
-    st.title("Explainability AI Dashboard")
+    st.title("Global XAI Dashboard")
 
-    # Load model, valid data. Compute SHAP values
-    clf = load_model("models/lgb_clf.pkl")
-    valid = load_data("data/valid.csv", sample_size=3000)
-    x_valid = valid[FEATURES]
-    all_shap_values, _ = compute_shap_values(clf, x_valid)
-    all_corrs = compute_corrcoef(x_valid, all_shap_values)
+    # Load model, valid data, SHAP values
+    clf, x_valid, all_shap_values, all_corrs = xai_data()
 
     idx = 0
     if TARGET_CLASSES is not None and len(TARGET_CLASSES) > 2:
@@ -79,12 +74,13 @@ def xai():
     st.pyplot(fig)
 
     st.subheader("SHAP Dependence Contribution Plot")
-    shap_feat = st.selectbox("Select feature", FEATURES[-4:] + FEATURES[:-4])
+    _feat_options = FEATURES[-4:] + FEATURES[:-4]
+    shap_feat = st.selectbox("Select feature", _feat_options)
     source = make_source_dp(all_shap_values[idx], x_valid.values, FEATURES, shap_feat)
     st.altair_chart(dependence_chart(source, shap_feat), use_container_width=False)
 
     st.subheader("SHAP Dependence Contribution Interaction Plot")
-    shap_feats = st.multiselect("Select two features", FEATURES[-4:] + FEATURES[:-4])
+    shap_feats = st.multiselect("Select two features", _feat_options)
     if len(shap_feats) > 1:
         shap_feat1, shap_feat2 = shap_feats[:2]
         fig = shap_dependence_plot(
@@ -111,8 +107,8 @@ def xai():
         feature2 = CATEGORY_MAP.get(pdp_feat2) or pdp_feat2
         pdp_interact_out = compute_pdp_interact(
             clf, _x_valid, FEATURES, [feature1, feature2])
-        st.altair_chart(pdp_heatmap(pdp_interact_out, pdp_feats[:2]),
-                        use_container_width=False)
+        st.altair_chart(
+            pdp_heatmap(pdp_interact_out, pdp_feats[:2]), use_container_width=False)
 
 
 if __name__ == "__main__":
