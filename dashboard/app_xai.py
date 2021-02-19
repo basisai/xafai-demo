@@ -2,10 +2,8 @@
 App for global XAI.
 """
 import altair as alt
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import shap
 import streamlit as st
 
 from xai_fairness.toolkit_xai import (
