@@ -16,5 +16,8 @@ after_mitigation: |
   We also explore other methods such as adversarial debiasing. The performance in terms of model and fairness have not been as good as calibrated equalized odds.
 
 
-metrics_to_use: ["Equal opportunity", "Predictive parity", "Statistical parity"]
-# ["Equal opportunity", "Predictive parity", "Statistical parity", "Predictive equality", "Equalized odd", "Conditional use accuracy equality"]
+metrics_to_use: [
+  "Equal opportunity (equal FNR)",
+  "Predictive parity (equal PPV)",
+  "Statistical parity",
+]

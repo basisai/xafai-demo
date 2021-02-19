@@ -7,15 +7,18 @@ import pandas as pd
 import streamlit as st
 import yaml
 
-from xai_fairness.static_fai import (
+from xai_fairness.toolkit_fai import (
+    prepare_dataset, 
     get_aif_metric,
+    get_perf_measure_by_group,
+)
+from xai_fairness.static_fai import (
     custom_fmeasures,
     plot_confusion_matrix,
     plot_fmeasures_bar,
     color_red,
     fairness_notes,
 )
-from xai_fairness.toolkit_fai import prepare_dataset, get_perf_measure_by_group
 
 from data.constants import FEATURES, TARGET, PROTECTED_FEATURES
 from data.utils import load_model, load_data, predict, print_model_perf
@@ -78,8 +81,7 @@ def fai(debias=False):
 
     st.header("Algorithmic Fairness Metrics")
     fthresh = st.slider("Set fairness deviation threshold", 0., 1., 0.2, 0.05)
-    st.write("Absolute fairness is 1. The model is considered fair "
-             f"if **ratio is between {1 - fthresh:.2f} and {1 + fthresh:.2f}**.")
+    st.write(f"Fairness is when **ratio is between {1 - fthresh:.2f} and {1 + fthresh:.2f}**.")
 
     # Compute fairness measures
     privi_info = PROTECTED_FEATURES[protected_attribute]
@@ -169,8 +171,8 @@ def fai(debias=False):
 def chart_cm_comparison(orig_clf_metric, clf_metric, privileged, title):
     cm1 = orig_clf_metric.binary_confusion_matrix(privileged=privileged)
     cm2 = clf_metric.binary_confusion_matrix(privileged=privileged)
-    c1 = get_confusion_matrix_chart(cm1, f"{title}: Before Mitigation")
-    c2 = get_confusion_matrix_chart(cm2, f"{title}: After Mitigation")
+    c1 = plot_confusion_matrix(cm1, f"{title}: Before Mitigation")
+    c2 = plot_confusion_matrix(cm2, f"{title}: After Mitigation")
     return c1 | c2
 
 
@@ -194,8 +196,7 @@ def compare():
 
     st.header("Algorithmic Fairness Metrics")
     fthresh = st.slider("Set fairness deviation threshold", 0., 1., 0.2, 0.05)
-    st.write("Absolute fairness is 1. The model is considered fair "
-             f"if **ratio is between {1 - fthresh:.2f} and {1 + fthresh:.2f}**.")
+    st.write(f"Fairness is when **ratio is between {1 - fthresh:.2f} and {1 + fthresh:.2f}**.")
 
     # Compute fairness measures
     privi_info = PROTECTED_FEATURES[protected_attribute]
@@ -207,9 +208,7 @@ def compare():
         privi_info["privileged_attribute_values"],
         privi_info["unprivileged_attribute_values"],
     )
-    orig_fmeasures = compute_fairness_measures(orig_aif_metric)
-    orig_fmeasures["Fair?"] = orig_fmeasures["Ratio"].apply(
-        lambda x: "Yes" if np.abs(x - 1) < fthresh else "No")
+    orig_fmeasures = custom_fmeasures(orig_aif_metric, threshold=fthresh)
 
     aif_metric = get_aif_metric(
         valid,
@@ -219,9 +218,7 @@ def compare():
         privi_info["privileged_attribute_values"],
         privi_info["unprivileged_attribute_values"],
     )
-    fmeasures = compute_fairness_measures(aif_metric)
-    fmeasures["Fair?"] = fmeasures["Ratio"].apply(
-        lambda x: "Yes" if np.abs(x - 1) < fthresh else "No")
+    fmeasures = custom_fmeasures(aif_metric, threshold=fthresh)
 
     for m in METRICS_TO_USE:
         source = pd.concat([orig_fmeasures.query(f"Metric == '{m}'"),

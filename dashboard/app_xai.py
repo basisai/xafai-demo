@@ -8,7 +8,10 @@ import pandas as pd
 import shap
 import streamlit as st
 
-from xai_fairness.toolkit_xai import shap_summary_plot, shap_dependence_plot
+from xai_fairness.toolkit_xai import (
+    shap_summary_plot,
+    shap_dependence_plot,
+)
 from xai_fairness.static_xai import (
     make_source_dp,
     dependence_chart,

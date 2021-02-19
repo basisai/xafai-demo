@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from xai_fairness.toolkit_fai import get_aif_metric
 from xai_fairness.static_fai import (
     binarize,
-    get_aif_metric,
     custom_fmeasures,
     alg_fai,
     fairness_notes,
@@ -65,12 +65,7 @@ def fai(version=1):
         privi_info["privileged_attribute_values"],
         privi_info["unprivileged_attribute_values"],
     )
-    # from xai_fairness.toolkit_fai import compute_fairness_measures
-    # fmeasures = compute_fairness_measures(aif_metric)
-    # st.write(fmeasures)
-
     fmeasures = custom_fmeasures(aif_metric, threshold=fthresh)
-    # st.write(fmeasures)
     alg_fai(fmeasures, aif_metric, fthresh)
 
     st.subheader("Notes")
