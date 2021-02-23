@@ -1,10 +1,9 @@
 """
 Helpers for XAI
 """
+import altair as alt
 import numpy as np
 import pandas as pd
-import shap
-import altair as alt
 import streamlit as st
 from pdpbox import pdp
 
