@@ -14,8 +14,8 @@ from xai_fairness.toolkit_fai import (
 )
 from xai_fairness.static_fai import (
     custom_fmeasures,
-    plot_confusion_matrix,
-    plot_fmeasures_bar,
+    confusion_matrix_chart,
+    fmeasures_chart,
     color_red,
     fairness_notes,
 )
@@ -95,7 +95,7 @@ def fai(debias=False):
     )
     fmeasures = custom_fmeasures(aif_metric, threshold=fthresh, fairness_metrics=METRICS_TO_USE)
 
-    st.altair_chart(plot_fmeasures_bar(fmeasures, fthresh), use_container_width=True)
+    st.altair_chart(fmeasures_chart(fmeasures, fthresh), use_container_width=True)
     
     st.dataframe(
         fmeasures[["Metric", "Unprivileged", "Privileged", "Ratio", "Fair?"]]
@@ -105,12 +105,12 @@ def fai(debias=False):
 
     st.subheader("Confusion Matrices")
     cm1 = aif_metric.binary_confusion_matrix(privileged=None)
-    c1 = plot_confusion_matrix(cm1, "All")
+    c1 = confusion_matrix_chart(cm1, "All")
     st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
     cm2 = aif_metric.binary_confusion_matrix(privileged=True)
-    c2 = plot_confusion_matrix(cm2, "Privileged")
+    c2 = confusion_matrix_chart(cm2, "Privileged")
     cm3 = aif_metric.binary_confusion_matrix(privileged=False)
-    c3 = plot_confusion_matrix(cm3, "Unprivileged")
+    c3 = confusion_matrix_chart(cm3, "Unprivileged")
     st.altair_chart(c2 | c3, use_container_width=False)
 
     # if debias:
@@ -129,7 +129,7 @@ def fai(debias=False):
     #         source["Metric"] = ["1-Before Mitigation", "2-After Mitigation"]
     #
     #         st.write(m)
-    #         st.altair_chart(plot_fmeasures_bar(source, fthresh), use_container_width=True)
+    #         st.altair_chart(fmeasures_chart(source, fthresh), use_container_width=True)
     #
     #     cm4 = orig_clf_metric.binary_confusion_matrix(privileged=None)
     #     c4a = get_confusion_matrix_chart(cm4, "All: Before Mitigation")
@@ -171,8 +171,8 @@ def fai(debias=False):
 def chart_cm_comparison(orig_clf_metric, clf_metric, privileged, title):
     cm1 = orig_clf_metric.binary_confusion_matrix(privileged=privileged)
     cm2 = clf_metric.binary_confusion_matrix(privileged=privileged)
-    c1 = plot_confusion_matrix(cm1, f"{title}: Before Mitigation")
-    c2 = plot_confusion_matrix(cm2, f"{title}: After Mitigation")
+    c1 = confusion_matrix_chart(cm1, f"{title}: Before Mitigation")
+    c2 = confusion_matrix_chart(cm2, f"{title}: After Mitigation")
     return c1 | c2
 
 
@@ -226,7 +226,7 @@ def compare():
         source["Metric"] = ["1-Before Mitigation", "2-After Mitigation"]
 
         st.write(m)
-        st.altair_chart(plot_fmeasures_bar(source, fthresh), use_container_width=True)
+        st.altair_chart(fmeasures_chart(source, fthresh), use_container_width=True)
 
 #     st.altair_chart(chart_cm_comparison(orig_clf_metric, clf_metric, None, "All"),
 #                     use_container_width=False)

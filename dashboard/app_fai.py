@@ -12,7 +12,7 @@ from xai_fairness.static_fai import (
     custom_fmeasures,
     alg_fai,
     fairness_notes,
-    plot_hist,
+    histogram_chart,
 )
 
 from data.constants import FEATURES, TARGET, TARGET_CLASSES, PROTECTED_FEATURES
@@ -44,7 +44,7 @@ def fai(version=1):
             protected_attribute: x_fai[protected_attribute].values,
             "Prediction": y_prob,
         })
-        st.altair_chart(plot_hist(source, cutoff), use_container_width=True)
+        st.altair_chart(histogram_chart(source, cutoff), use_container_width=True)
 
         st.header("Model Performance")
         st.text(print_model_perf(y_valid, y_pred))

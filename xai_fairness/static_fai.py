@@ -22,8 +22,8 @@ def color_red(x):
     return "color: red" if x == "No" else "color: black"
 
 
-def plot_hist(source, cutoff):
-    """Plot custom histogram."""
+def histogram_chart(source, cutoff):
+    """Histogram chart."""
     source["Cutoff"] = cutoff
     var = source.columns[0]
     base = alt.Chart(source)
@@ -46,8 +46,8 @@ def plot_hist(source, cutoff):
     return chart + rule + mean
 
 
-def plot_fmeasures_bar(df, threshold):
-    """Plot custom bar chart."""
+def fmeasures_chart(df, threshold):
+    """Fairness metrics bar chart."""
     source = df.copy()
     source["lbd"] = 1 - threshold
     source["ubd"] = 1 + threshold
@@ -71,8 +71,8 @@ def plot_fmeasures_bar(df, threshold):
     return bars + rule1 + rule2
 
 
-def plot_confusion_matrix(cm, title):
-    """Plot custom confusion matrix."""
+def confusion_matrix_chart(cm, title):
+    """Confusion matrix chart."""
     source = pd.DataFrame(
         [
             ["negative", "negative", cm["TN"]],
@@ -119,7 +119,7 @@ def custom_fmeasures(aif_metric, threshold=0.2, fairness_metrics=None):
 def alg_fai(fmeasures, aif_metric, threshold):
     st.write(f"Fairness is when **ratio is between {1 - threshold:.2f} and {1 + threshold:.2f}**.")
 
-    chart = plot_fmeasures_bar(fmeasures, threshold)
+    chart = fmeasures_chart(fmeasures, threshold)
     st.altair_chart(chart, use_container_width=True)
 
     st.dataframe(
@@ -130,12 +130,12 @@ def alg_fai(fmeasures, aif_metric, threshold):
 
     st.subheader("Confusion Matrices")
     cm1 = aif_metric.binary_confusion_matrix(privileged=None)
-    c1 = plot_confusion_matrix(cm1, "All")
+    c1 = confusion_matrix_chart(cm1, "All")
     st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
     cm2 = aif_metric.binary_confusion_matrix(privileged=True)
-    c2 = plot_confusion_matrix(cm2, "Privileged")
+    c2 = confusion_matrix_chart(cm2, "Privileged")
     cm3 = aif_metric.binary_confusion_matrix(privileged=False)
-    c3 = plot_confusion_matrix(cm3, "Unprivileged")
+    c3 = confusion_matrix_chart(cm3, "Unprivileged")
     st.altair_chart(c2 | c3, use_container_width=False)
 
     st.header("Annex")
