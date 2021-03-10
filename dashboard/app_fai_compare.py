@@ -14,10 +14,10 @@ from xai_fairness.toolkit_fai import (
 )
 from xai_fairness.static_fai import (
     custom_fmeasures,
+    alg_fai,
+    fairness_notes,
     confusion_matrix_chart,
     fmeasures_chart,
-    color_red,
-    fairness_notes,
 )
 
 from data.constants import FEATURES, TARGET, PROTECTED_FEATURES
@@ -81,7 +81,6 @@ def fai(debias=False):
 
     st.header("Algorithmic Fairness Metrics")
     fthresh = st.slider("Set fairness deviation threshold", 0., 1., 0.2, 0.05)
-    st.write(f"Fairness is when **ratio is between {1 - fthresh:.2f} and {1 + fthresh:.2f}**.")
 
     # Compute fairness measures
     privi_info = PROTECTED_FEATURES[protected_attribute]
@@ -94,75 +93,7 @@ def fai(debias=False):
         privi_info["unprivileged_attribute_values"],
     )
     fmeasures = custom_fmeasures(aif_metric, threshold=fthresh, fairness_metrics=METRICS_TO_USE)
-
-    st.altair_chart(fmeasures_chart(fmeasures, fthresh), use_container_width=True)
-    
-    st.dataframe(
-        fmeasures[["Metric", "Unprivileged", "Privileged", "Ratio", "Fair?"]]
-        .style.applymap(color_red, subset=["Fair?"])
-        .format({"Unprivileged": "{:.3f}", "Privileged": "{:.3f}", "Ratio": "{:.3f}"})
-    )
-
-    st.subheader("Confusion Matrices")
-    cm1 = aif_metric.binary_confusion_matrix(privileged=None)
-    c1 = confusion_matrix_chart(cm1, "All")
-    st.altair_chart(alt.concat(c1, columns=2), use_container_width=False)
-    cm2 = aif_metric.binary_confusion_matrix(privileged=True)
-    c2 = confusion_matrix_chart(cm2, "Privileged")
-    cm3 = aif_metric.binary_confusion_matrix(privileged=False)
-    c3 = confusion_matrix_chart(cm3, "Unprivileged")
-    st.altair_chart(c2 | c3, use_container_width=False)
-
-    # if debias:
-    #     # Compute original model confusion matrix
-    #     orig_y_pred = (y_prob > cutoff).astype(int)
-    #     orig_fmeasures, orig_clf_metric = get_fmeasures(
-    #         x_val, y_val, orig_y_pred, protected_attribute,
-    #         privileged_attribute_values, unprivileged_attribute_values,
-    #         fthresh, METRICS_TO_USE,
-    #     )
-    #
-    #     st.header("Comparison before and after mitigation")
-    #     for m in METRICS_TO_USE:
-    #         source = pd.concat([orig_fmeasures.query(f"Metric == '{m}'"),
-    #                             fmeasures.query(f"Metric == '{m}'")])
-    #         source["Metric"] = ["1-Before Mitigation", "2-After Mitigation"]
-    #
-    #         st.write(m)
-    #         st.altair_chart(fmeasures_chart(source, fthresh), use_container_width=True)
-    #
-    #     cm4 = orig_clf_metric.binary_confusion_matrix(privileged=None)
-    #     c4a = get_confusion_matrix_chart(cm4, "All: Before Mitigation")
-    #     c4b = get_confusion_matrix_chart(cm1, "All: After Mitigation")
-    #     st.altair_chart(c4a | c4b, use_container_width=False)
-    #
-    #     cm5 = orig_clf_metric.binary_confusion_matrix(privileged=True)
-    #     c5a = get_confusion_matrix_chart(cm5, "Privileged: Before Mitigation")
-    #     c5b = get_confusion_matrix_chart(cm2, "Privileged: After Mitigation")
-    #     st.altair_chart(c5a | c5b, use_container_width=False)
-    #
-    #     cm6 = orig_clf_metric.binary_confusion_matrix(privileged=False)
-    #     c6a = get_confusion_matrix_chart(cm6, "Unprivileged: Before Mitigation")
-    #     c6b = get_confusion_matrix_chart(cm3, "Unprivileged: After Mitigation")
-    #     st.altair_chart(c6a | c6b, use_container_width=False)
-
-    st.header("Annex")
-    st.subheader("Performance Metrics")
-    all_perfs = []
-    for metric_name in [
-            'TPR', 'TNR', 'FPR', 'FNR', 'PPV', 'NPV', 'FDR', 'FOR', 'ACC',
-            'selection_rate', 'precision', 'recall', 'sensitivity',
-            'specificity', 'power', 'error_rate']:
-        df = get_perf_measure_by_group(aif_metric, metric_name)
-        c = alt.Chart(df).mark_bar().encode(
-            x=f"{metric_name}:Q",
-            y="Group:O",
-            tooltip=["Group", metric_name],
-        )
-        all_perfs.append(c)
-    
-    all_charts = alt.concat(*all_perfs, columns=1)
-    st.altair_chart(all_charts, use_container_width=False)
+    alg_fai(fmeasures, aif_metric, fthresh)
 
     st.subheader("Notes")
     fairness_notes()

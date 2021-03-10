@@ -122,8 +122,9 @@ def alg_fai(fmeasures, aif_metric, threshold):
     chart = fmeasures_chart(fmeasures, threshold)
     st.altair_chart(chart, use_container_width=True)
 
-    st.dataframe(
+    st.table(
         fmeasures[["Metric", "Unprivileged", "Privileged", "Ratio", "Fair?"]]
+        .set_index("Metric")
         .style.applymap(color_red, subset=["Fair?"])
         .format({"Unprivileged": "{:.3f}", "Privileged": "{:.3f}", "Ratio": "{:.3f}"})
     )
